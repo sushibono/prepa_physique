@@ -432,6 +432,16 @@
       "Genoux alignés avec les pieds, pas vers l'intérieur",
       "Gaine le ventre, respire normalement pendant la tenue"
     ]),
+    platecalf: () => withCues(timed("Power plate — mollets isométriques", 30, "Monte sur la pointe des pieds sur la plateforme, contracte les mollets pendant toute la vibration.", "holdsquat", "coordination"), [
+      "Pointes de pieds sur la plateforme, talons levés",
+      "Contracte les mollets, garde l'équilibre",
+      "Respire normalement pendant toute la tenue"
+    ]),
+    platelunge: () => withCues(timed("Power plate — fente isométrique", 30, "Un pied sur la plateforme, l'autre en arrière, genou avant à 90°, tiens la position.", "holdsquat", "coordination"), [
+      "Pied avant sur la plateforme, genou à 90°",
+      "Jambe arrière tendue, appui sur l'orteil",
+      "Buste droit pendant toute la tenue"
+    ]),
     wallsit: () => withCues(timed("Chaise (dos au mur)", 35, "Dos plaqué contre un mur, cuisses parallèles au sol, genoux à 90°, bras relâchés.", "holdsquat", "strength"), [
       "Dos entièrement plaqué contre le mur",
       "Genoux à 90°, alignés avec les chevilles",
@@ -484,7 +494,7 @@
   };
   const UPPER = ['bench','row','raise','curl','tricep','shoulderpress'];
   const LOWER = ['squat','lunge','hipext','calfraise'];
-  const COORD = ['abwheel','rotation','plate','plank','wallsit'];
+  const COORD = ['abwheel','rotation','plate','plank','wallsit','platecalf','platelunge'];
 
   const SESSION_SEEDS = [
     { muscuOffset:0, fitnessOffset:0, startMachine:'row'  },
