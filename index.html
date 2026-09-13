@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Séance guidée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#14181C;
+    --bg-panel:#1C2228;
+    --bg-panel-raised:#232B33;
+    --line:#323C46;
+    --text-primary:#F2F0EB;
+    --text-muted:#8B96A1;
+    --effort:#FF6B4A;
+    --rest:#4ECDC4;
+    --neutral:#E8B84B;
+    --strength:#C9A6FF;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg-deep);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+  }
+  .app{ width:100%; max-width:460px; }
+  .header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px; }
+  .header h1{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.15rem; letter-spacing:-0.01em; }
+  .header .total-time{ font-family:'Space Grotesk',sans-serif; font-size:0.85rem; color:var(--text-muted); font-variant-numeric:tabular-nums; }
+
+  .progress-track{ height:5px; border-radius:3px; background:var(--line); overflow:hidden; margin-bottom:22px; }
+  .progress-fill{ height:100%; width:0%; background:var(--neutral); transition:width 0.3s linear; }
+
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:18px; padding:28px 26px 26px; text-align:center; }
+
+  .back-btn{
+    display:block; margin:0 auto 14px; background:none; border:1px solid var(--line);
+    color:var(--text-muted); font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:500;
+    padding:6px 14px; border-radius:20px; cursor:pointer; transition:background 0.15s ease, color 0.15s ease;
+  }
+  .back-btn:hover{ background:var(--bg-panel-raised); color:var(--text-primary); }
+
+  .block-label{ font-size:0.78rem; color:var(--text-muted); margin-bottom:6px; }
+  .exercise-name{
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.35rem; line-height:1.25;
+    min-height:2.2rem; display:flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  .icon-wrap{ width:150px; height:150px; margin:10px auto 2px; color:var(--neutral); }
+  .icon-wrap svg{ width:100%; height:100%; }
+  .icon-wrap svg.static-hold{ animation:holdPulse 2.6s ease-in-out infinite; }
+  .icon-wrap svg circle, .pose-frame svg circle, .np-icon svg circle{ fill:currentColor; }
+
+  .pose-frames{ display:flex; justify-content:center; gap:28px; margin:8px 0 12px; }
+  .pose-frame{ text-align:center; }
+  .pose-frame .frame-icon{ width:96px; height:96px; margin:0 auto; }
+  .pose-frame .frame-icon svg{ width:100%; height:100%; }
+  .pose-frame .frame-label{ font-size:0.72rem; color:var(--text-muted); margin-top:5px; text-transform:uppercase; letter-spacing:0.05em; }
+  @keyframes holdPulse{ 0%,100%{ opacity:0.82; } 50%{ opacity:1; } }
+  .pose-a{ animation:poseA 2.4s ease-in-out infinite; }
+  .pose-b{ animation:poseB 2.4s ease-in-out infinite; }
+  @keyframes poseA{ 0%{opacity:1;} 40%{opacity:1;} 50%{opacity:0;} 90%{opacity:0;} 100%{opacity:1;} }
+  @keyframes poseB{ 0%{opacity:0;} 40%{opacity:0;} 50%{opacity:1;} 90%{opacity:1;} 100%{opacity:0;} }
+
+  .reps-target{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.8rem;
+    margin:6px 0 2px; color:var(--text-primary);
+  }
+  .advice-text{
+    font-size:0.95rem; color:var(--text-primary); line-height:1.5; max-width:360px;
+    margin:8px auto 4px; min-height:2.6rem; text-align:left;
+  }
+  .cue-list{ list-style:none; counter-reset:cue; margin:0; padding:0; text-align:left; }
+  .cue-list li{
+    counter-increment:cue; position:relative; padding-left:30px; margin-bottom:9px;
+    font-size:0.92rem; line-height:1.4; color:var(--text-primary);
+  }
+  .cue-list li::before{
+    content:counter(cue); position:absolute; left:0; top:0;
+    width:21px; height:21px; border-radius:50%; background:var(--bg-panel-raised);
+    border:1px solid var(--line); color:var(--text-primary);
+    font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .next-preview{
+    background:var(--bg-panel-raised); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; margin:10px 0 4px; text-align:left; display:flex; gap:12px; align-items:center;
+  }
+  .next-preview .np-icon{ width:44px; height:44px; flex-shrink:0; color:var(--text-muted); }
+  .next-preview .np-icon svg{ width:100%; height:100%; }
+  .next-preview .np-text{ font-size:0.78rem; color:var(--text-muted); line-height:1.4; }
+  .next-preview .np-text b{ color:var(--text-primary); display:block; font-size:0.86rem; margin-bottom:2px; }
+
+  .ring-wrap{ position:relative; width:190px; height:190px; margin:14px auto 10px; }
+  .ring-wrap svg.ring-svg{ transform:rotate(-90deg); }
+  .ring-bg{ fill:none; stroke:var(--bg-panel-raised); stroke-width:9; }
+  .ring-fg{ fill:none; stroke-width:9; stroke-linecap:round; transition:stroke-dashoffset 0.2s linear, stroke 0.3s ease; }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .time-display{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:2.5rem; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+  .phase-tag{ margin-top:4px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); }
+
+  .next-up{ font-size:0.82rem; color:var(--text-muted); margin:6px 0 20px; min-height:1.2rem; }
+  .next-up b{ color:var(--text-primary); font-weight:500; }
+
+  .controls{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:6px; }
+  .btn{ border:none; cursor:pointer; font-family:'Inter',sans-serif; font-weight:600; color:var(--text-primary); background:var(--bg-panel-raised); border:1px solid var(--line); transition:background 0.15s ease, transform 0.1s ease; }
+  .btn:active{ transform:scale(0.96); }
+  .btn-round{ width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
+  .btn-round:hover{ background:#2B343D; }
+  .btn-main{ width:72px; height:72px; border-radius:50%; background:var(--effort); border:none; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+  .btn-main:hover{ background:#FF7D5F; }
+
+  .done-btn{
+    width:100%; background:var(--strength); color:#181818; border:none; border-radius:14px;
+    padding:16px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.05rem;
+    cursor:pointer; margin:14px 0 4px;
+  }
+  .done-btn:hover{ filter:brightness(1.08); }
+  .done-btn:active{ transform:scale(0.98); }
+  .stopwatch{ font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; margin-bottom:4px; }
+
+  .footer-row{ display:flex; justify-content:space-between; margin-top:18px; font-size:0.76rem; color:var(--text-muted); }
+  .footer-row span b{ color:var(--text-primary); }
+
+  .voice-toggle{ display:flex; align-items:center; gap:8px; justify-content:center; margin-top:16px; font-size:0.78rem; color:var(--text-muted); }
+  .voice-toggle input{ accent-color:var(--effort); }
+
+  .start-screen{ text-align:center; padding:6px 2px 2px; }
+  .start-screen p{ color:var(--text-muted); font-size:0.85rem; line-height:1.5; margin:12px 0 18px; }
+
+  .duration-picker{ display:flex; gap:8px; margin-bottom:18px; }
+  .duration-btn{
+    flex:1; padding:12px 4px; border-radius:12px; border:1px solid var(--line); background:var(--bg-panel-raised);
+    color:var(--text-muted); font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.95rem; cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .duration-btn.selected{ background:var(--effort); border-color:var(--effort); color:#181818; }
+
+  .theme-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .theme-chip{
+    padding:9px 14px; border-radius:20px; border:1px solid var(--line); background:var(--bg-panel-raised);
+    color:var(--text-muted); font-family:'Inter',sans-serif; font-size:0.82rem; font-weight:500;
+    cursor:pointer; transition:all 0.15s ease;
+  }
+  .theme-chip.selected{ background:var(--strength); border-color:var(--strength); color:#181818; }
+  .chip-time{ display:block; font-size:0.68rem; font-weight:400; opacity:0.75; margin-top:1px; }
+  .breakdown-row{
+    display:flex; justify-content:space-between; gap:10px; font-size:0.74rem; color:var(--text-muted);
+    background:var(--bg-panel-raised); border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; margin-bottom:16px;
+  }
+  .breakdown-row b{ color:var(--text-primary); font-weight:600; }
+
+  .voice-picker{ text-align:left; background:var(--bg-panel-raised); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .voice-picker label{ font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:8px; }
+  .voice-picker-row{ display:flex; gap:8px; }
+  .voice-picker-row select{ flex:1; background:var(--bg-panel); color:var(--text-primary); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-family:'Inter',sans-serif; font-size:0.85rem; }
+  .voice-hint{ font-size:0.7rem; color:var(--text-muted); line-height:1.4; margin-top:10px; }
+
+  .start-btn{
+    background:var(--effort); color:#181818; border:none; border-radius:14px; padding:16px 26px;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; cursor:pointer; width:100%;
+  }
+  .start-btn:hover{ background:#FF7D5F; }
+
+  .done-screen{ display:none; text-align:center; padding:26px 8px; }
+  .done-screen h2{ font-family:'Space Grotesk',sans-serif; font-size:1.4rem; margin-bottom:10px; }
+  .done-screen p{ color:var(--text-muted); font-size:0.9rem; }
+
+  @media (max-width:420px){ .ring-wrap{ width:170px; height:170px; } .time-display{ font-size:2.1rem; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header"><h1>Séance guidée</h1><div class="total-time" id="totalTimeLabel">—</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="panel" id="mainPanel">
+
+    <div id="startScreen" class="start-screen">
+      <div class="block-label">Choisis la durée</div>
+      <div class="duration-picker" id="durationPicker">
+        <button class="duration-btn" data-min="15">15 min</button>
+        <button class="duration-btn" data-min="30">30 min</button>
+        <button class="duration-btn selected" data-min="45">45 min</button>
+        <button class="duration-btn" data-min="60">60 min</button>
+      </div>
+
+      <div class="block-label">Choisis la séance</div>
+      <div class="duration-picker" id="sessionPicker">
+        <button class="duration-btn selected" data-session="1">1</button>
+        <button class="duration-btn" data-session="2">2</button>
+        <button class="duration-btn" data-session="3">3</button>
+        <button class="duration-btn" data-session="4">4</button>
+        <button class="duration-btn" data-session="5">5</button>
+      </div>
+
+      <div class="block-label">Thématiques (décoche ce que tu n'as pas sous la main)</div>
+      <div class="theme-picker" id="themePicker">
+        <button class="theme-chip selected" data-theme="rameur">Rameur<span class="chip-time" id="chipTime-rameur"></span></button>
+        <button class="theme-chip selected" data-theme="velo">Vélo<span class="chip-time" id="chipTime-velo"></span></button>
+        <button class="theme-chip selected" data-theme="corde">Corde à sauter<span class="chip-time" id="chipTime-corde"></span></button>
+        <button class="theme-chip selected" data-theme="muscu">Musculation<span class="chip-time" id="chipTime-muscu"></span></button>
+        <button class="theme-chip selected" data-theme="fitness">Fitness / gainage<span class="chip-time" id="chipTime-fitness"></span></button>
+      </div>
+
+      <div id="machinePrefWrap" style="display:none;">
+        <div class="block-label">Machine cardio pour cette séance</div>
+        <div class="duration-picker" id="machinePicker">
+          <button class="duration-btn selected" data-machine="auto">Auto (varie)</button>
+          <button class="duration-btn" data-machine="row">Rameur</button>
+          <button class="duration-btn" data-machine="bike">Vélo</button>
+        </div>
+      </div>
+
+      <label class="voice-toggle" style="justify-content:center; margin-bottom:14px;">
+        <input type="checkbox" id="skipWarmupCooldownCheckbox" checked> Séance 100% exercices (je gère l'échauffement et les étirements moi-même)
+      </label>
+
+      <div class="breakdown-row">
+        <span>Repos entre les exercices <b id="breakdownRest">—</b></span>
+        <span>Échauffement + retour au calme <b id="breakdownOther">—</b></span>
+      </div>
+
+      <p>Cardio (rameur, vélo, corde à sauter), renfo en répétitions et coordination, mélangés en circuit. Pendant chaque repos, je t'explique et te montre le prochain exercice. Les séries de muscu sont à ton rythme — la durée est donc approximative.</p>
+
+      <label class="voice-toggle" style="justify-content:center; margin-bottom:14px;">
+        <input type="checkbox" id="voiceCheckbox" checked> Annonces vocales activées
+      </label>
+
+      <div class="voice-picker">
+        <label for="voiceSelect">Voix française</label>
+        <div class="voice-picker-row">
+          <select id="voiceSelect"></select>
+          <button class="btn btn-round" id="testVoiceBtn" title="Tester la voix">▶</button>
+        </div>
+        <p class="voice-hint">Privilégie une voix marquée « Enhanced », « Natural » ou « Google » si ta liste en propose une.</p>
+        <p class="voice-hint" id="voiceQualityWarning" style="display:none; color:var(--effort); font-weight:600;">⚠ Aucune voix « Enhanced/Neurale » détectée sur cet appareil — seules les voix basiques (plus robotiques) sont disponibles. Va dans les réglages de synthèse vocale de ton appareil pour en télécharger une meilleure en français (voir infos ci-dessous).</p>
+      </div>
+
+      <button class="start-btn" id="startBtn">Démarrer la séance</button>
+    </div>
+
+    <div id="liveScreen" style="display:none;">
+      <button class="back-btn" id="backHomeBtn">← Accueil</button>
+      <div class="block-label" id="blockLabel">—</div>
+      <div class="exercise-name" id="exerciseName">—</div>
+      <div class="icon-wrap" id="iconWrap"></div>
+      <div class="pose-frames" id="poseFrames"></div>
+
+      <!-- REPS MODE -->
+      <div id="repsMode" style="display:none;">
+        <div class="reps-target" id="repsTarget">—</div>
+        <div class="advice-text" id="adviceTextReps"></div>
+        <div class="stopwatch" id="stopwatchLabel">00:00</div>
+        <button class="done-btn" id="repsDoneBtn">✓ Série terminée</button>
+      </div>
+
+      <!-- TIMED / REST MODE -->
+      <div id="timedMode" style="display:none;">
+        <div class="advice-text" id="adviceTextTimed"></div>
+        <div class="next-preview" id="nextPreview" style="display:none;">
+          <div class="np-icon" id="npIcon"></div>
+          <div class="np-text"><b id="npName"></b><span id="npTip"></span></div>
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="190" height="190" viewBox="0 0 190 190">
+            <circle class="ring-bg" cx="95" cy="95" r="82"></circle>
+            <circle class="ring-fg" id="ringFg" cx="95" cy="95" r="82" stroke-dasharray="515.2" stroke-dashoffset="0" stroke="#E8B84B"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="time-display" id="timeDisplay">00:00</div>
+            <div class="phase-tag" id="phaseTag">—</div>
+          </div>
+        </div>
+        <div class="next-up" id="nextUp"></div>
+        <div class="controls">
+          <button class="btn btn-round" id="skipBackBtn" title="Étape précédente">⟲</button>
+          <button class="btn btn-main" id="playPauseBtn" title="Pause">❚❚</button>
+          <button class="btn btn-round" id="skipFwdBtn" title="Étape suivante">⟳</button>
+        </div>
+      </div>
+
+      <div class="footer-row">
+        <span>Écoulé <b id="elapsedLabel">00:00</b></span>
+        <span>Exercice <b id="stepCounter">1/1</b></span>
+      </div>
+      <label class="voice-toggle">
+        <input type="checkbox" id="voiceCheckboxLive" checked> Annonces vocales
+      </label>
+    </div>
+
+    <div id="doneScreen" class="done-screen">
+      <h2>Séance terminée 👏</h2>
+      <p>Bravo — cardio, renfo et coordination bouclés. Bonne récupération.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------------- ICONS ----------------
+  const ICON_BODIES = {
+    press: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="46" y2="52"/><line x1="60" y1="40" x2="74" y2="52"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+            b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="42" y2="55"/><line x1="42" y1="55" x2="42" y2="26"/><line x1="60" y1="40" x2="78" y2="55"/><line x1="78" y1="55" x2="78" y2="26"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    pull: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="42" x2="95" y2="52"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+            b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="42" x2="70" y2="55"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    raise: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="42" x2="52" y2="60"/><line x1="60" y1="42" x2="68" y2="60"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+             b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="42" x2="26" y2="38"/><line x1="60" y1="42" x2="94" y2="38"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    curl: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="46" y2="52"/><line x1="60" y1="40" x2="78" y2="70"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+            b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="46" y2="52"/><line x1="60" y1="40" x2="78" y2="55"/><line x1="78" y1="55" x2="66" y2="34"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    rotation: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="58" y2="68"/><line x1="58" y1="42" x2="40" y2="55"/><line x1="58" y1="42" x2="76" y2="55"/><line x1="58" y1="68" x2="44" y2="105"/><line x1="58" y1="68" x2="72" y2="105"/>`,
+                b:`<circle cx="66" cy="20" r="10"/><line x1="66" y1="30" x2="58" y2="68"/><line x1="66" y1="42" x2="90" y2="48"/><line x1="66" y1="42" x2="42" y2="62"/><line x1="58" y1="68" x2="44" y2="105"/><line x1="58" y1="68" x2="72" y2="105"/>` },
+    squat: { a:`<circle cx="58" cy="20" r="10"/><line x1="58" y1="30" x2="58" y2="66"/><line x1="58" y1="40" x2="40" y2="55"/><line x1="58" y1="40" x2="76" y2="55"/><line x1="58" y1="66" x2="46" y2="105"/><line x1="58" y1="66" x2="70" y2="105"/>`,
+             b:`<circle cx="58" cy="34" r="10"/><line x1="58" y1="44" x2="55" y2="66"/><line x1="55" y1="66" x2="40" y2="54"/><line x1="55" y1="66" x2="70" y2="54"/><line x1="55" y1="66" x2="40" y2="88"/><line x1="40" y1="88" x2="38" y2="108"/><line x1="55" y1="66" x2="72" y2="88"/><line x1="72" y1="88" x2="76" y2="108"/>` },
+    lunge: { a:`<circle cx="55" cy="20" r="10"/><line x1="55" y1="30" x2="57" y2="66"/><line x1="57" y1="40" x2="40" y2="55"/><line x1="57" y1="40" x2="74" y2="55"/><line x1="57" y1="66" x2="45" y2="105"/><line x1="57" y1="66" x2="70" y2="105"/>`,
+             b:`<circle cx="55" cy="26" r="10"/><line x1="55" y1="36" x2="57" y2="64"/><line x1="57" y1="64" x2="42" y2="52"/><line x1="57" y1="64" x2="72" y2="52"/><line x1="57" y1="64" x2="40" y2="82"/><line x1="40" y1="82" x2="35" y2="108"/><line x1="57" y1="64" x2="80" y2="72"/><line x1="80" y1="72" x2="93" y2="100"/>` },
+    hipext: { a:`<circle cx="32" cy="55" r="9"/><line x1="32" y1="64" x2="68" y2="66"/><line x1="32" y1="64" x2="22" y2="90"/><line x1="68" y1="66" x2="64" y2="92"/><line x1="68" y1="66" x2="82" y2="88"/><line x1="82" y1="88" x2="80" y2="106"/>`,
+              b:`<circle cx="32" cy="55" r="9"/><line x1="32" y1="64" x2="68" y2="66"/><line x1="32" y1="64" x2="22" y2="90"/><line x1="68" y1="66" x2="64" y2="92"/><line x1="68" y1="66" x2="96" y2="52"/><line x1="96" y1="52" x2="112" y2="38"/>` },
+    abwheel: { a:`<circle cx="80" cy="45" r="9"/><line x1="80" y1="54" x2="74" y2="76"/><line x1="74" y1="76" x2="60" y2="100"/><line x1="80" y1="54" x2="60" y2="62"/><circle cx="48" cy="66" r="8"/>`,
+               b:`<circle cx="92" cy="52" r="9"/><line x1="92" y1="61" x2="78" y2="80"/><line x1="78" y1="80" x2="60" y2="100"/><line x1="92" y1="61" x2="45" y2="66"/><circle cx="28" cy="70" r="8"/>` },
+    row_machine: { a:`<circle cx="30" cy="45" r="9"/><line x1="30" y1="54" x2="46" y2="70"/><line x1="46" y1="70" x2="72" y2="76"/><line x1="30" y1="54" x2="90" y2="48"/>`,
+                   b:`<circle cx="42" cy="42" r="9"/><line x1="42" y1="51" x2="52" y2="70"/><line x1="52" y1="70" x2="72" y2="76"/><line x1="42" y1="51" x2="70" y2="52"/>` },
+    bike: { a:`<circle cx="35" cy="40" r="9"/><line x1="35" y1="49" x2="45" y2="70"/><line x1="35" y1="49" x2="56" y2="55"/><line x1="45" y1="70" x2="72" y2="60"/><line x1="45" y1="70" x2="60" y2="87"/>`,
+            b:`<circle cx="35" cy="40" r="9"/><line x1="35" y1="49" x2="45" y2="70"/><line x1="35" y1="49" x2="56" y2="55"/><line x1="45" y1="70" x2="65" y2="82"/><line x1="45" y1="70" x2="58" y2="58"/>` },
+    jumprope: { a:`<circle cx="60" cy="32" r="10"/><line x1="60" y1="42" x2="60" y2="72"/><line x1="60" y1="46" x2="45" y2="56"/><line x1="60" y1="46" x2="75" y2="56"/><line x1="60" y1="72" x2="50" y2="100"/><line x1="60" y1="72" x2="70" y2="100"/><path d="M45,56 Q60,10 75,56" stroke-dasharray="4 5"/>`,
+                b:`<circle cx="60" cy="18" r="10"/><line x1="60" y1="28" x2="60" y2="58"/><line x1="60" y1="32" x2="45" y2="42"/><line x1="60" y1="32" x2="75" y2="42"/><line x1="60" y1="58" x2="52" y2="80"/><line x1="60" y1="58" x2="68" y2="80"/><path d="M45,42 Q60,-4 75,42" stroke-dasharray="4 5"/>` },
+    stretch: `<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="35" x2="38" y2="14"/><line x1="60" y1="35" x2="82" y2="14"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+    plank: `<circle cx="22" cy="55" r="9"/><line x1="22" y1="63" x2="98" y2="76"/><line x1="26" y1="63" x2="18" y2="92"/><line x1="92" y1="74" x2="96" y2="96"/>`,
+    holdsquat: `<circle cx="58" cy="34" r="10"/><line x1="58" y1="44" x2="55" y2="66"/><line x1="55" y1="66" x2="40" y2="54"/><line x1="55" y1="66" x2="70" y2="54"/><line x1="55" y1="66" x2="40" y2="88"/><line x1="40" y1="88" x2="38" y2="108"/><line x1="55" y1="66" x2="72" y2="88"/><line x1="72" y1="88" x2="76" y2="108"/><line x1="92" y1="12" x2="92" y2="116"/>`,
+    shoulderpress: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="44" y2="42"/><line x1="60" y1="40" x2="76" y2="42"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+                     b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="42" y2="20"/><line x1="60" y1="40" x2="78" y2="20"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    tricep: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="46" y2="52"/><line x1="60" y1="40" x2="75" y2="25"/><line x1="75" y1="25" x2="62" y2="42"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
+             b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="46" y2="52"/><line x1="60" y1="40" x2="75" y2="25"/><line x1="75" y1="25" x2="80" y2="8"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
+    calfraise: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="42" x2="48" y2="55"/><line x1="60" y1="42" x2="72" y2="55"/><line x1="60" y1="68" x2="50" y2="103"/><line x1="60" y1="68" x2="70" y2="103"/><line x1="42" y1="107" x2="58" y2="107"/><line x1="62" y1="107" x2="78" y2="107"/>`,
+                b:`<circle cx="60" cy="14" r="10"/><line x1="60" y1="24" x2="60" y2="62"/><line x1="60" y1="36" x2="48" y2="49"/><line x1="60" y1="36" x2="72" y2="49"/><line x1="60" y1="62" x2="50" y2="95"/><line x1="60" y1="62" x2="70" y2="95"/><line x1="46" y1="107" x2="56" y2="99"/><line x1="66" y1="99" x2="76" y2="107"/>` }
+  };
+
+  function wrapSvg(bodyKey, color){
+    const body = ICON_BODIES[bodyKey] || ICON_BODIES.press;
+    if(typeof body === 'object'){
+      return `<svg class="animated-pose" viewBox="0 0 120 120" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <g class="pose-a">${body.a}</g><g class="pose-b">${body.b}</g></svg>`;
+    }
+    return `<svg class="static-hold" viewBox="0 0 120 120" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  }
+  function staticSvg(bodyStr, color){
+    return `<svg viewBox="0 0 120 120" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">${bodyStr}</svg>`;
+  }
+  function renderPoseFrames(bodyKey, color){
+    const body = ICON_BODIES[bodyKey] || ICON_BODIES.press;
+    if(typeof body === 'object'){
+      poseFrames.style.display = 'flex';
+      poseFrames.innerHTML =
+        '<div class="pose-frame" style="color:' + color + '"><div class="frame-icon">' + staticSvg(body.a, color) + '</div><div class="frame-label">Départ</div></div>' +
+        '<div class="pose-frame" style="color:' + color + '"><div class="frame-icon">' + staticSvg(body.b, color) + '</div><div class="frame-label">Fin</div></div>';
+    } else {
+      poseFrames.style.display = 'none';
+      poseFrames.innerHTML = '';
+    }
+  }
+
+  const PHASE_COLOR = { warmup:"#E8B84B", effort:"#FF6B4A", rest:"#4ECDC4", strength:"#C9A6FF", coordination:"#4ECDC4", active_recovery:"#4ECDC4" };
+  const PHASE_LABEL = { warmup:"Échauffement", effort:"Effort", rest:"Repos", strength:"Renforcement", coordination:"Coordination", active_recovery:"Récupération active" };
+
+  // ---------------- EXERCISE LIBRARY ----------------
+  function rep(ex, reps, tip, icon, phase, estDur){
+    return { type:'reps', ex, reps, tip, icon, phase, estDur, blockName:"Circuit" };
+  }
+  function timed(ex, dur, tip, icon, phase, blockName){
+    return { type:'timed', ex, dur, tip, icon, phase, blockName: blockName || "Circuit" };
+  }
+  function rest(dur){
+    return { type:'rest', ex:"Repos", dur, phase:'rest', blockName:"Repos" };
+  }
+
+  function withCues(step, cues){ step.cues = cues; return step; }
+
+  // Génère une paire d'étapes distinctes (côté droit / côté gauche) pour les exercices unilatéraux.
+  function unilateralPair(exName, repsText, tip, icon, phase, estDurPerSide, cues){
+    const right = withCues(rep(exName + " — côté droit", repsText, tip, icon, phase, estDurPerSide), cues);
+    const left  = withCues(rep(exName + " — côté gauche", repsText, tip, icon, phase, estDurPerSide), cues);
+    return [right, left];
+  }
+
+  const EXLIB = {
+    // ---- Bilatéral : les deux bras / jambes travaillent ensemble ----
+    bench:   () => withCues(rep("Développé couché", "12 répétitions (les deux bras ensemble)", "Descends lentement jusqu'à la poitrine, expire en poussant, pieds ancrés au sol.", "press", "strength", 40), [
+      "Barre ou haltères au niveau de la poitrine, coudes à 45°",
+      "Pousse en expirant, bras presque tendus en haut",
+      "Redescends lentement, pieds ancrés au sol"
+    ]),
+    raise:   () => withCues(rep("Élévations latérales", "15 répétitions (les deux bras ensemble)", "Légère flexion des coudes, monte jusqu'à hauteur d'épaule, ne balance pas le buste.", "raise", "strength", 40), [
+      "Bras légèrement fléchis, jamais tendus",
+      "Monte jusqu'à hauteur d'épaule, pas plus haut",
+      "Redescends lentement, sans élan du buste"
+    ]),
+    curl:    () => withCues(rep("Curl biceps", "15 répétitions (les deux bras ensemble)", "Coudes fixes contre le corps, contrôle la descente, ne triche pas avec le dos.", "curl", "strength", 40), [
+      "Coudes collés au corps, immobiles",
+      "Monte en expirant, sans balancer le dos",
+      "Redescends lentement, 2 secondes de contrôle"
+    ]),
+    squat:   () => withCues(rep("Squats haltères", "15 répétitions (les deux jambes ensemble)", "Hanches en arrière, dos droit, poids sur les talons, genoux dans l'axe des pieds.", "squat", "strength", 45), [
+      "Pieds largeur d'épaules, orteils légèrement ouverts",
+      "Les hanches reculent en premier, dos reste droit",
+      "Descends jusqu'aux cuisses parallèles, poids sur les talons"
+    ]),
+    abwheel: () => withCues(rep("Roue abdominale", "10 répétitions (les deux mains ensemble)", "Gaine le ventre, ne creuse pas le bas du dos, reviens dès que la sangle lâche.", "abwheel", "coordination", 35), [
+      "Genoux au sol, mains posées sur la roue",
+      "Roule vers l'avant tant que le dos reste gainé",
+      "Reviens dès que le bas du dos veut se creuser"
+    ]),
+    plate:   () => withCues(timed("Power plate, squat isométrique", 30, "Cuisses proches de la parallèle, genoux alignés avec les pieds, gaine le tronc.", "holdsquat", "coordination"), [
+      "Cuisses proches de la parallèle au sol",
+      "Genoux alignés avec les pieds, pas vers l'intérieur",
+      "Gaine le ventre, respire normalement pendant la tenue"
+    ]),
+    wallsit: () => withCues(timed("Chaise (dos au mur)", 35, "Dos plaqué contre un mur, cuisses parallèles au sol, genoux à 90°, bras relâchés.", "holdsquat", "strength"), [
+      "Dos entièrement plaqué contre le mur",
+      "Genoux à 90°, alignés avec les chevilles",
+      "Bras relâchés, respire normalement"
+    ]),
+    plank:   () => withCues(timed("Planche (gainage)", 35, "Corps aligné de la tête aux talons, gaine le ventre et les fessiers, ne creuse pas le bas du dos.", "plank", "coordination"), [
+      "Avant-bras au sol, coudes sous les épaules",
+      "Corps aligné tête-bassin-talons, sans creux ni bosse",
+      "Serre fessiers et ventre pendant toute la tenue"
+    ]),
+
+    // ---- Unilatéral : un côté à la fois, annoncé séparément (droite puis gauche) ----
+    row:     () => unilateralPair("Rowing haltère", "12 répétitions", "Dos plat, tire le coude vers la hanche, contracte le dos en haut du mouvement.", "pull", "strength", 22, [
+      "Dos plat, buste penché en avant à 45°",
+      "Tire le coude vers la hanche, pas vers l'épaule",
+      "Contracte l'omoplate en haut du mouvement"
+    ]),
+    lunge:   () => unilateralPair("Fentes marchées, jambe avant", "12 répétitions", "Grand pas devant, genou arrière proche du sol, buste droit.", "lunge", "strength", 22, [
+      "Grand pas devant, buste droit",
+      "Le genou arrière frôle le sol sans le toucher",
+      "Pousse sur le talon avant pour te relever"
+    ]),
+    hipext:  () => unilateralPair("Extension de hanche, élastique", "15 répétitions", "Contracte le fessier en haut, garde le bassin stable, ne cambre pas le dos.", "hipext", "strength", 22, [
+      "Élastique fixé au niveau des chevilles",
+      "Jambe tendue, pousse vers l'arrière",
+      "Contracte le fessier en haut, sans cambrer le dos"
+    ]),
+    rotation:() => unilateralPair("Élastique, rotation du buste", "12 répétitions", "Hanches fixes, tourne uniquement le buste, contrôle le retour.", "rotation", "coordination", 20, [
+      "Élastique tendu devant toi, bras tendus",
+      "Pivote uniquement le buste, hanches fixes",
+      "Reviens lentement au centre, sans à-coup"
+    ]),
+
+    // ---- Ajouts audit coach : triceps, épaules, mollets — groupes musculaires non couverts ----
+    tricep:  () => withCues(rep("Extension triceps haltère (nuque)", "12 répétitions (les deux bras ensemble)", "Coudes pointés vers le haut, immobiles, seul l'avant-bras bouge.", "tricep", "strength", 40), [
+      "Haltère tenu à deux mains derrière la nuque, coudes vers le haut",
+      "Étends les bras vers le plafond sans bouger les coudes",
+      "Redescends lentement derrière la tête, contrôle le mouvement"
+    ]),
+    shoulderpress: () => withCues(rep("Développé épaules haltères", "12 répétitions (les deux bras ensemble)", "Pousse les haltères au-dessus de la tête sans cambrer le dos.", "shoulderpress", "strength", 40), [
+      "Haltères à hauteur d'épaules, coudes sous les mains",
+      "Pousse vers le haut jusqu'à bras presque tendus",
+      "Redescends lentement, sans cambrer le bas du dos"
+    ]),
+    calfraise: () => withCues(rep("Élévations mollets haltères", "20 répétitions (les deux jambes ensemble)", "Monte sur la pointe des pieds, contracte les mollets en haut.", "calfraise", "strength", 30), [
+      "Haltères le long du corps, pieds à plat",
+      "Monte sur la pointe des pieds, contracte les mollets",
+      "Redescends lentement sans laisser retomber les talons"
+    ])
+  };
+  const UPPER = ['bench','row','raise','curl','tricep','shoulderpress'];
+  const LOWER = ['squat','lunge','hipext','calfraise'];
+  const COORD = ['abwheel','rotation','plate','plank','wallsit'];
+
+  const SESSION_SEEDS = [
+    { muscuOffset:0, fitnessOffset:0, startMachine:'row'  },
+    { muscuOffset:1, fitnessOffset:2, startMachine:'bike' },
+    { muscuOffset:2, fitnessOffset:1, startMachine:'row'  },
+    { muscuOffset:3, fitnessOffset:3, startMachine:'bike' },
+    { muscuOffset:5, fitnessOffset:4, startMachine:'row'  }
+  ];
+
+  const BASE_WEIGHTS = { cardio:0.22, jump:0.10, muscu:0.35, fitness:0.15 };
+
+  function buildProgram(minutes, sessionIdx, themes){
+    const seed = SESSION_SEEDS[(sessionIdx - 1 + SESSION_SEEDS.length) % SESSION_SEEDS.length];
+    const totalSec = minutes * 60;
+    const steps = [];
+
+    const machines = [];
+    if(themes.rameur) machines.push('row_machine');
+    if(themes.velo) machines.push('bike');
+    let primaryMachine = null;
+    if(machines.length){
+      if(themes.machinePref === 'row' && machines.includes('row_machine')) primaryMachine = 'row_machine';
+      else if(themes.machinePref === 'bike' && machines.includes('bike')) primaryMachine = 'bike';
+      else {
+        const wantRow = seed.startMachine === 'row';
+        primaryMachine = wantRow ? (machines.includes('row_machine') ? 'row_machine' : machines[0])
+                                 : (machines.includes('bike') ? 'bike' : machines[0]);
+      }
+    }
+
+    const enabled = {
+      cardio: machines.length > 0,
+      jump: !!themes.corde,
+      muscu: !!themes.muscu,
+      fitness: !!themes.fitness
+    };
+    let wsum = 0;
+    Object.keys(BASE_WEIGHTS).forEach(k => { if(enabled[k]) wsum += BASE_WEIGHTS[k]; });
+
+    const skipWU = !!themes.skipWarmupCooldown;
+    const warmupSec = skipWU ? 0 : Math.max(60, Math.round(totalSec * 0.08));
+    const cooldownTarget = skipWU ? 0 : Math.max(90, Math.round(totalSec * 0.10));
+    const workBudget = Math.max(0, totalSec - warmupSec - cooldownTarget);
+    function secFor(k){ return (wsum > 0 && enabled[k]) ? Math.round(workBudget * (BASE_WEIGHTS[k] / wsum)) : 0; }
+    const cardioSec = secFor('cardio'), jumpSec = secFor('jump'), muscuSec = secFor('muscu'), fitnessSec = secFor('fitness');
+
+    // ---- Warmup (same tool as the main cardio block, so no early tool switch) ----
+    if(!skipWU){
+      if(primaryMachine){
+        const wname = primaryMachine === 'row_machine' ? "Rameur léger" : "Vélo léger";
+        steps.push(timed("Échauffement — " + wname, warmupSec, "Augmente progressivement l'intensité, garde le dos droit et les épaules basses.", primaryMachine, "warmup", "Échauffement"));
+      } else if(themes.corde){
+        steps.push(timed("Échauffement — corde à sauter légère", warmupSec, "Petits bonds réguliers pour monter en température.", "jumprope", "warmup", "Échauffement"));
+      } else {
+        steps.push(timed("Échauffement — mobilité articulaire", warmupSec, "Mobilise épaules, hanches et chevilles, monte doucement en intensité.", "stretch", "warmup", "Échauffement"));
+      }
+    }
+
+    // ---- Bloc 1 : cardio machine, un seul outil du début à la fin ----
+    // Protocole "40-20" (40s effort / 20s récupération active) : ratio 2:1 documenté en cyclisme/course.
+    // Récupération ACTIVE (on continue à ramer/pédaler doucement) plutôt qu'un arrêt complet — recommandation
+    // standard en HIIT sur machine cardio, contrairement au repos complet adapté à la musculation.
+    if(primaryMachine && cardioSec > 0){
+      const cardioActiveRecDur = 20;
+      const roundLen = 40 + cardioActiveRecDur;
+      const rounds = Math.max(1, Math.round(cardioSec / roundLen));
+      const mname = primaryMachine === 'row_machine' ? "Rameur" : "Vélo";
+      const effortTip = primaryMachine === 'row_machine'
+        ? "Rame vite et fort : pousse d'abord avec les jambes, dos droit."
+        : "Pédale fort en restant fluide sur la selle, épaules basses.";
+      const recoveryTip = primaryMachine === 'row_machine'
+        ? "Ne t'arrête pas : rame doucement à faible intensité pour garder le sang qui circule."
+        : "Ne t'arrête pas : pédale doucement à faible intensité pour garder le sang qui circule.";
+      for(let i=0;i<rounds;i++){
+        steps.push(timed(`${mname} — effort ${i+1}/${rounds}`, 40, effortTip, primaryMachine, "effort", mname));
+        if(i < rounds - 1){
+          steps.push(timed(`${mname} — récupération active`, cardioActiveRecDur, recoveryTip, primaryMachine, "active_recovery", mname));
+        }
+      }
+    }
+
+    // ---- Bloc 2 : corde à sauter — la seule transition entre les outils ----
+    // 30s effort / 15s repos : les efforts pliométriques continus au-delà de 30-40s sont déconseillés (fatigue d'impact).
+    if(themes.corde && jumpSec > 0){
+      if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(20));
+      const jumpRestDur = 15;
+      const roundLen = 30 + jumpRestDur;
+      const rounds = Math.max(1, Math.round(jumpSec / roundLen));
+      for(let i=0;i<rounds;i++){
+        steps.push(timed(`Corde à sauter ${i+1}/${rounds}`, 30, "Petits bonds réguliers, poignets qui font tourner la corde, regarde devant toi.", "jumprope", "effort", "Corde à sauter"));
+        if(i < rounds - 1) steps.push(rest(jumpRestDur));
+      }
+    }
+
+    // Pousse un exercice dans la séance : gère aussi bien les exercices bilatéraux (un seul
+    // objet) que les exercices unilatéraux (paire droite/gauche), avec une courte transition
+    // entre les deux côtés pour changer de position.
+    function pushExercise(key, blockName){
+      const result = EXLIB[key]();
+      const items = Array.isArray(result) ? result : [result];
+      let dur = 0;
+      items.forEach((ex, idx) => {
+        ex.blockName = blockName;
+        steps.push(ex);
+        dur += getDur(ex);
+        if(idx < items.length - 1){ steps.push(rest(15)); dur += 15; }
+      });
+      return dur;
+    }
+
+    // ---- Bloc 3 : musculation — un seul passage, haltères/bandes du début à la fin ----
+    // 60s de repos : zone haute recommandation ACSM/coaching pour charges modérées à 10-15 répétitions (hypertrophie/endurance musculaire).
+    if(themes.muscu && muscuSec > 0){
+      if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
+      const combined = [];
+      const maxLen = Math.max(UPPER.length, LOWER.length);
+      for(let i=0;i<maxLen;i++){ if(UPPER[i]) combined.push(UPPER[i]); if(LOWER[i]) combined.push(LOWER[i]); }
+      const muscuRest = 60;
+      let acc = 0, i = 0;
+      while(acc < muscuSec){
+        const key = combined[(i + seed.muscuOffset) % combined.length];
+        acc += pushExercise(key, "Musculation");
+        i++;
+        if(acc < muscuSec){ steps.push(rest(muscuRest)); acc += muscuRest; }
+      }
+    }
+
+    // ---- Bloc 4 : fitness / gainage — un seul passage ----
+    // 35s de repos : endurance musculaire statique (gainage), moins de fatigue neuromusculaire qu'une charge lourde.
+    if(themes.fitness && fitnessSec > 0){
+      if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
+      const fitnessRest = 35;
+      let acc = 0, i = 0;
+      while(acc < fitnessSec){
+        const key = COORD[(i + seed.fitnessOffset) % COORD.length];
+        acc += pushExercise(key, "Fitness / gainage");
+        i++;
+        if(acc < fitnessSec){ steps.push(rest(fitnessRest)); acc += fitnessRest; }
+      }
+    }
+
+    // ---- Retour au calme : absorbe le temps restant pour matcher la durée choisie (sauf en mode 100% exercices) ----
+    if(!skipWU){
+      const usedSoFar = steps.reduce((a,s) => a + getDur(s), 0);
+      const cooldownSec = Math.max(60, totalSec - usedSoFar);
+      steps.push(timed("Retour au calme — étirements", cooldownSec, "Étire doucement ischio-jambiers, dos et épaules. Respire lentement.", "stretch", "warmup", "Retour au calme"));
+    }
+
+    return steps;
+  }
+
+  function getDur(step){ return step.type === 'reps' ? step.estDur : step.dur; }
+
+  // ---------------- DOM ----------------
+  const startScreen = document.getElementById('startScreen');
+  const liveScreen = document.getElementById('liveScreen');
+  const doneScreen = document.getElementById('doneScreen');
+  const startBtn = document.getElementById('startBtn');
+  const durationPicker = document.getElementById('durationPicker');
+  const sessionPicker = document.getElementById('sessionPicker');
+  const themePicker = document.getElementById('themePicker');
+  const machinePrefWrap = document.getElementById('machinePrefWrap');
+  const machinePicker = document.getElementById('machinePicker');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const skipFwdBtn = document.getElementById('skipFwdBtn');
+  const skipBackBtn = document.getElementById('skipBackBtn');
+  const repsDoneBtn = document.getElementById('repsDoneBtn');
+  const backHomeBtn = document.getElementById('backHomeBtn');
+  const blockLabel = document.getElementById('blockLabel');
+  const exerciseName = document.getElementById('exerciseName');
+  const iconWrap = document.getElementById('iconWrap');
+  const poseFrames = document.getElementById('poseFrames');
+  const repsMode = document.getElementById('repsMode');
+  const timedModeEl = document.getElementById('timedMode');
+  const repsTarget = document.getElementById('repsTarget');
+  const adviceTextReps = document.getElementById('adviceTextReps');
+  const adviceTextTimed = document.getElementById('adviceTextTimed');
+  const stopwatchLabel = document.getElementById('stopwatchLabel');
+  const nextPreview = document.getElementById('nextPreview');
+  const npIcon = document.getElementById('npIcon');
+  const npName = document.getElementById('npName');
+  const npTip = document.getElementById('npTip');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const phaseTag = document.getElementById('phaseTag');
+  const nextUp = document.getElementById('nextUp');
+  const elapsedLabel = document.getElementById('elapsedLabel');
+  const stepCounter = document.getElementById('stepCounter');
+  const totalTimeLabel = document.getElementById('totalTimeLabel');
+  const ringFg = document.getElementById('ringFg');
+  const progressFill = document.getElementById('progressFill');
+  const voiceCheckbox = document.getElementById('voiceCheckbox');
+  const voiceCheckboxLive = document.getElementById('voiceCheckboxLive');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const testVoiceBtn = document.getElementById('testVoiceBtn');
+  const voiceQualityWarning = document.getElementById('voiceQualityWarning');
+
+  const RING_CIRC = 2 * Math.PI * 82;
+
+  let selectedMinutes = 45;
+  let selectedSession = 1;
+  let selectedThemes = { rameur:true, velo:true, corde:true, muscu:true, fitness:true };
+  let selectedMachinePref = 'auto';
+  let skipWarmupCooldown = true;
+  let STEPS = [];
+  let TOTAL_ESTIMATED = 0;
+  let stepIdx = 0;
+  let timeLeftInStep = 0;
+  let elapsedInStepUp = 0;
+  let elapsedTotal = 0;
+  let running = false;
+  let timerHandle = null;
+  let beepedCount = {};
+  let audioCtx = null;
+  let availableVoices = [];
+  let selectedVoice = null;
+
+  function fmt(sec){ sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec/60), s = sec%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+
+  function fmtMin(sec){
+    const m = sec / 60;
+    return (m < 1 && sec > 0) ? '<1 min' : Math.round(m) + ' min';
+  }
+
+  function updateThemeBreakdown(){
+    let preview;
+    selectedThemes.machinePref = selectedMachinePref;
+    selectedThemes.skipWarmupCooldown = skipWarmupCooldown;
+    try{ preview = buildProgram(selectedMinutes, selectedSession, selectedThemes); }
+    catch(err){ return; }
+    const totals = { rameur:0, velo:0, corde:0, muscu:0, fitness:0 };
+    preview.forEach(s => {
+      if(s.type === 'rest') return;
+      if(s.icon === 'row_machine') totals.rameur += getDur(s);
+      else if(s.icon === 'bike') totals.velo += getDur(s);
+      else if(s.icon === 'jumprope') totals.corde += getDur(s);
+      if(s.blockName === 'Musculation') totals.muscu += getDur(s);
+      else if(s.blockName === 'Fitness / gainage') totals.fitness += getDur(s);
+    });
+    Object.keys(totals).forEach(key => {
+      const el = document.getElementById('chipTime-' + key);
+      if(el) el.textContent = selectedThemes[key] ? fmtMin(totals[key]) : '—';
+    });
+
+    const totalAll = preview.reduce((a,s) => a + getDur(s), 0);
+    const totalRest = preview.filter(s => s.type === 'rest').reduce((a,s) => a + getDur(s), 0);
+    const themedSum = Object.values(totals).reduce((a,b) => a + b, 0);
+    const nonThemed = Math.max(0, totalAll - totalRest - themedSum);
+    const restEl = document.getElementById('breakdownRest');
+    const otherEl = document.getElementById('breakdownOther');
+    if(restEl) restEl.textContent = fmtMin(totalRest);
+    if(otherEl) otherEl.textContent = fmtMin(nonThemed);
+  }
+
+  function refreshMachinePrefVisibility(){
+    machinePrefWrap.style.display = (selectedThemes.rameur && selectedThemes.velo) ? 'block' : 'none';
+  }
+
+  machinePicker.querySelectorAll('.duration-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      machinePicker.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedMachinePref = btn.dataset.machine;
+      updateThemeBreakdown();
+    });
+  });
+
+  const skipWarmupCooldownCheckbox = document.getElementById('skipWarmupCooldownCheckbox');
+  skipWarmupCooldownCheckbox.addEventListener('change', () => {
+    skipWarmupCooldown = skipWarmupCooldownCheckbox.checked;
+    updateThemeBreakdown();
+  });
+
+  // ---- Duration picker ----
+  durationPicker.querySelectorAll('.duration-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      durationPicker.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedMinutes = parseInt(btn.dataset.min, 10);
+      totalTimeLabel.textContent = '≈ ' + selectedMinutes + ' min';
+      updateThemeBreakdown();
+    });
+  });
+  totalTimeLabel.textContent = '≈ ' + selectedMinutes + ' min';
+
+  // ---- Session picker ----
+  sessionPicker.querySelectorAll('.duration-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sessionPicker.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedSession = parseInt(btn.dataset.session, 10);
+      updateThemeBreakdown();
+    });
+  });
+
+  // ---- Theme picker ----
+  themePicker.querySelectorAll('.theme-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.theme;
+      const turningOff = btn.classList.contains('selected');
+      const activeCount = Object.values(selectedThemes).filter(Boolean).length;
+      if(turningOff && activeCount <= 1) return; // keep at least one theme enabled
+      selectedThemes[key] = !turningOff;
+      btn.classList.toggle('selected', !turningOff);
+      refreshMachinePrefVisibility();
+      updateThemeBreakdown();
+    });
+  });
+  refreshMachinePrefVisibility();
+  updateThemeBreakdown();
+
+  // ---- Voices ----
+  function scoreVoice(v){
+    const n = v.name.toLowerCase(); let score = 0;
+    if(n.includes('enhanced')||n.includes('premium')||n.includes('natural')||n.includes('neural')||n.includes('online')) score += 5;
+    if(n.includes('google')) score += 3;
+    if(n.includes('siri')) score += 3;
+    if(v.localService === false) score += 1;
+    if(n.includes('thomas')||n.includes('amelie')||n.includes('amélie')||n.includes('audrey')||n.includes('marie')||n.includes('nicolas')||n.includes('aurelie')||n.includes('aurélie')||n.includes('denise')||n.includes('henri')||n.includes('eloise')||n.includes('éloise')) score += 2;
+    if(n.includes('compact')||n.includes('microsoft ')&&!n.includes('online')) score -= 3;
+    return score;
+  }
+  function isLikelyRobotic(v){
+    const n = v.name.toLowerCase();
+    return !(n.includes('enhanced')||n.includes('premium')||n.includes('natural')||n.includes('neural')||n.includes('online')||n.includes('google')||v.localService===false);
+  }
+  function loadVoices(){
+    const all = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    availableVoices = all.filter(v => v.lang && v.lang.toLowerCase().startsWith('fr'));
+    if(availableVoices.length === 0) availableVoices = all;
+    availableVoices.sort((a,b) => scoreVoice(b) - scoreVoice(a));
+    voiceSelect.innerHTML = '';
+    availableVoices.forEach((v,i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = v.name+' ('+v.lang+')'; voiceSelect.appendChild(opt); });
+    if(availableVoices.length > 0){ voiceSelect.value = 0; selectedVoice = availableVoices[0]; }
+    if(voiceQualityWarning){
+      if(availableVoices.length > 0 && isLikelyRobotic(availableVoices[0])){
+        voiceQualityWarning.style.display = 'block';
+      } else {
+        voiceQualityWarning.style.display = 'none';
+      }
+    }
+  }
+  if('speechSynthesis' in window){ loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
+  voiceSelect.addEventListener('change', () => { selectedVoice = availableVoices[parseInt(voiceSelect.value,10)]; });
+  testVoiceBtn.addEventListener('click', () => { ensureAudioCtx(); speakRaw("Voici un exemple de voix pour t'accompagner pendant ta séance."); });
+
+  function speakRaw(text){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      if(selectedVoice) u.voice = selectedVoice;
+      u.lang = selectedVoice ? selectedVoice.lang : 'fr-FR';
+      u.rate = 0.95; u.pitch = 0.95;
+      window.speechSynthesis.speak(u);
+    }catch(err){}
+  }
+  function speak(text){ if(!voiceCheckboxLive.checked) return; speakRaw(text); }
+
+  function ensureAudioCtx(){
+    try{
+      if(!audioCtx){ const Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioCtx = new Ctx(); }
+      if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }catch(err){ audioCtx = null; }
+  }
+  function beep(freq, duration){
+    if(!audioCtx) return;
+    try{
+      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+      osc.frequency.value = freq; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }catch(err){}
+  }
+
+  // ---------------- Rendering ----------------
+  function cuesHtml(step){
+    if(step.cues && step.cues.length){
+      return '<ol class="cue-list">' + step.cues.map(c => '<li>' + c + '</li>').join('') + '</ol>';
+    }
+    return step.tip || '';
+  }
+
+  function renderStep(){
+    const step = STEPS[stepIdx];
+    const color = PHASE_COLOR[step.phase];
+    blockLabel.textContent = step.blockName;
+    const totalEx = STEPS.filter(s => s.type !== 'rest').length;
+    let doneEx = 0;
+    for(let i=0;i<=stepIdx;i++){ if(STEPS[i].type !== 'rest') doneEx++; }
+    stepCounter.textContent = doneEx + '/' + totalEx;
+    iconWrap.style.color = color;
+    if(step.type === 'rest'){
+      iconWrap.style.display = 'none';
+      poseFrames.style.display = 'none';
+      iconWrap.innerHTML = '';
+    } else {
+      const bodyDef = ICON_BODIES[step.icon] || ICON_BODIES.press;
+      const isTwoPose = (typeof bodyDef === 'object');
+      iconWrap.style.display = isTwoPose ? 'none' : 'block';
+      iconWrap.innerHTML = isTwoPose ? '' : wrapSvg(step.icon, color);
+      renderPoseFrames(step.icon, color);
+    }
+
+    if(step.type === 'reps'){
+      exerciseName.textContent = step.ex;
+      repsMode.style.display = 'block';
+      timedModeEl.style.display = 'none';
+      repsTarget.textContent = step.reps;
+      adviceTextReps.innerHTML = cuesHtml(step);
+      stopwatchLabel.textContent = '00:00';
+    } else if(step.type === 'rest'){
+      const next = STEPS[stepIdx+1];
+      exerciseName.textContent = "Repos";
+      repsMode.style.display = 'none';
+      timedModeEl.style.display = 'block';
+      adviceTextTimed.textContent = "Récupère, respire calmement.";
+      if(next){
+        nextPreview.style.display = 'flex';
+        npIcon.style.color = PHASE_COLOR[next.phase];
+        const npBody = ICON_BODIES[next.icon] || ICON_BODIES.press;
+        npIcon.innerHTML = (typeof npBody === 'object')
+          ? staticSvg(npBody.b, PHASE_COLOR[next.phase])
+          : wrapSvg(next.icon, PHASE_COLOR[next.phase]);
+        npName.textContent = "Ensuite : " + next.ex + (next.type === 'reps' ? (' — ' + next.reps) : '');
+        npTip.innerHTML = cuesHtml(next);
+      } else {
+        nextPreview.style.display = 'none';
+      }
+      nextUp.innerHTML = '';
+      phaseTag.textContent = PHASE_LABEL.rest;
+      ringFg.setAttribute('stroke', color);
+      playPauseBtn.style.background = color;
+    } else { // timed
+      exerciseName.textContent = step.ex;
+      repsMode.style.display = 'none';
+      timedModeEl.style.display = 'block';
+      adviceTextTimed.innerHTML = cuesHtml(step);
+      nextPreview.style.display = 'none';
+      const nextStep = STEPS[stepIdx+1];
+      nextUp.innerHTML = nextStep ? ('Ensuite : <b>' + nextStep.ex + '</b>') : '<b>Dernière étape</b>';
+      phaseTag.textContent = PHASE_LABEL[step.phase];
+      ringFg.setAttribute('stroke', color);
+      playPauseBtn.style.background = color;
+    }
+    updateRing();
+    updateFooter();
+  }
+
+  function updateRing(){
+    const step = STEPS[stepIdx];
+    if(step.type === 'reps') return;
+    const progress = 1 - (timeLeftInStep / step.dur);
+    const offset = RING_CIRC * Math.max(0, Math.min(1, progress));
+    ringFg.setAttribute('stroke-dasharray', RING_CIRC.toFixed(1));
+    ringFg.setAttribute('stroke-dashoffset', offset.toFixed(1));
+    timeDisplay.textContent = fmt(timeLeftInStep);
+  }
+
+  function updateFooter(){
+    elapsedLabel.textContent = fmt(elapsedTotal);
+    const pct = Math.max(0, Math.min(100, (elapsedTotal / TOTAL_ESTIMATED) * 100));
+    progressFill.style.width = pct + '%';
+  }
+
+  function spokenAdvice(step){
+    if(step.cues && step.cues.length) return step.cues.join('. ');
+    return step.tip || '';
+  }
+  function announceEntry(step){
+    if(step.type === 'reps'){ speak(step.ex + '. Objectif : ' + step.reps + '. ' + spokenAdvice(step)); }
+    else if(step.type === 'rest'){
+      const next = STEPS[stepIdx+1];
+      if(next){
+        const nextDesc = next.type === 'reps' ? (next.ex + '. Objectif : ' + next.reps) : next.ex;
+        speak('Repos. Ensuite : ' + nextDesc + '. ' + spokenAdvice(next));
+      } else { speak('Repos.'); }
+    } else { speak(step.ex + '. ' + spokenAdvice(step)); }
+  }
+
+  function goToStep(idx, announce){
+    if(idx < 0) idx = 0;
+    if(idx >= STEPS.length){ finishWorkout(); return; }
+    elapsedTotal = 0;
+    for(let i=0;i<idx;i++) elapsedTotal += getDur(STEPS[i]);
+    stepIdx = idx;
+    const step = STEPS[idx];
+    timeLeftInStep = step.type === 'reps' ? 0 : step.dur;
+    elapsedInStepUp = 0;
+    beepedCount = {};
+    renderStep();
+    if(announce) announceEntry(step);
+  }
+
+  function tick(){
+    const step = STEPS[stepIdx];
+    elapsedTotal += 1;
+
+    if(step.type === 'reps'){
+      elapsedInStepUp += 1;
+      stopwatchLabel.textContent = fmt(elapsedInStepUp);
+      updateFooter();
+      return;
+    }
+
+    timeLeftInStep -= 1;
+    if(timeLeftInStep <= 3 && timeLeftInStep > 0){
+      const key = String(timeLeftInStep);
+      if(!beepedCount[key]){ beep(880, 0.12); beepedCount[key] = true; }
+    }
+    if(timeLeftInStep <= 0){
+      if(stepIdx + 1 >= STEPS.length){ finishWorkout(); return; }
+      beep(660, 0.25);
+      goToStep(stepIdx + 1, true);
+      return;
+    }
+    updateRing();
+    updateFooter();
+  }
+
+  function startTimer(){
+    if(timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(tick, 1000);
+    running = true;
+    playPauseBtn.textContent = '❚❚'; playPauseBtn.title = 'Pause';
+  }
+  function pauseTimer(){
+    if(timerHandle) clearInterval(timerHandle);
+    running = false;
+    playPauseBtn.textContent = '▶'; playPauseBtn.title = 'Reprendre';
+    if('speechSynthesis' in window) window.speechSynthesis.pause();
+  }
+
+  function finishWorkout(){
+    if(timerHandle) clearInterval(timerHandle);
+    running = false;
+    liveScreen.style.display = 'none';
+    doneScreen.style.display = 'block';
+    speak("Séance terminée, bravo !");
+    beep(523,0.15); setTimeout(()=>beep(659,0.15),160); setTimeout(()=>beep(784,0.3),320);
+  }
+
+  function resetToHome(){
+    if(timerHandle) clearInterval(timerHandle);
+    running = false;
+    if('speechSynthesis' in window) window.speechSynthesis.cancel();
+    liveScreen.style.display = 'none';
+    doneScreen.style.display = 'none';
+    startScreen.style.display = 'block';
+  }
+
+  // ---------------- Controls ----------------
+  startBtn.addEventListener('click', () => {
+    ensureAudioCtx();
+    voiceCheckboxLive.checked = voiceCheckbox.checked;
+    selectedThemes.machinePref = selectedMachinePref;
+    selectedThemes.skipWarmupCooldown = skipWarmupCooldown;
+    STEPS = buildProgram(selectedMinutes, selectedSession, selectedThemes);
+    TOTAL_ESTIMATED = STEPS.reduce((s, st) => s + getDur(st), 0);
+    totalTimeLabel.textContent = '≈ ' + fmt(TOTAL_ESTIMATED);
+    startScreen.style.display = 'none';
+    liveScreen.style.display = 'block';
+    goToStep(0, true);
+    startTimer();
+  });
+
+  playPauseBtn.addEventListener('click', () => {
+    ensureAudioCtx();
+    if(running) pauseTimer();
+    else { if('speechSynthesis' in window) window.speechSynthesis.resume(); startTimer(); }
+  });
+  skipFwdBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx + 1, true); });
+  skipBackBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx - 1, true); });
+  repsDoneBtn.addEventListener('click', () => { ensureAudioCtx(); beep(660,0.2); goToStep(stepIdx + 1, true); });
+  backHomeBtn.addEventListener('click', () => { resetToHome(); });
+
+})();
+</script>
+</body>
+</html>
