@@ -28,18 +28,18 @@
     display:flex;
     align-items:flex-start;
     justify-content:center;
-    min-height:100vh;
-    padding:24px;
+    min-height:100dvh;
+    padding:14px;
   }
   .app{ width:100%; max-width:460px; }
-  .header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px; }
+  .header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
   .header h1{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.15rem; letter-spacing:-0.01em; }
   .header .total-time{ font-family:'Space Grotesk',sans-serif; font-size:0.85rem; color:var(--text-muted); font-variant-numeric:tabular-nums; }
 
-  .progress-track{ height:5px; border-radius:3px; background:var(--line); overflow:hidden; margin-bottom:22px; }
+  .progress-track{ height:5px; border-radius:3px; background:var(--line); overflow:hidden; margin-bottom:12px; }
   .progress-fill{ height:100%; width:0%; background:var(--neutral); transition:width 0.3s linear; }
 
-  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:18px; padding:28px 26px 26px; text-align:center; }
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:18px; padding:18px 16px 16px; text-align:center; }
 
   .back-btn{
     display:block; margin:0 auto 14px; background:none; border:1px solid var(--line);
@@ -54,14 +54,14 @@
     min-height:2.2rem; display:flex; align-items:center; justify-content:center; padding:0 4px;
   }
 
-  .icon-wrap{ width:150px; height:150px; margin:10px auto 2px; color:var(--neutral); }
+  .icon-wrap{ width:110px; height:110px; margin:6px auto 2px; color:var(--neutral); }
   .icon-wrap svg{ width:100%; height:100%; }
   .icon-wrap svg.static-hold{ animation:holdPulse 2.6s ease-in-out infinite; }
   .icon-wrap svg circle, .pose-frame svg circle, .np-icon svg circle{ fill:currentColor; }
 
   .pose-frames{ display:flex; justify-content:center; gap:28px; margin:8px 0 12px; }
   .pose-frame{ text-align:center; }
-  .pose-frame .frame-icon{ width:96px; height:96px; margin:0 auto; }
+  .pose-frame .frame-icon{ width:70px; height:70px; margin:0 auto; }
   .pose-frame .frame-icon svg{ width:100%; height:100%; }
   .pose-frame .frame-label{ font-size:0.72rem; color:var(--text-muted); margin-top:5px; text-transform:uppercase; letter-spacing:0.05em; }
   @keyframes holdPulse{ 0%,100%{ opacity:0.82; } 50%{ opacity:1; } }
@@ -98,15 +98,15 @@
   .next-preview .np-text{ font-size:0.78rem; color:var(--text-muted); line-height:1.4; }
   .next-preview .np-text b{ color:var(--text-primary); display:block; font-size:0.86rem; margin-bottom:2px; }
 
-  .ring-wrap{ position:relative; width:190px; height:190px; margin:14px auto 10px; }
-  .ring-wrap svg.ring-svg{ transform:rotate(-90deg); }
+  .ring-wrap{ position:relative; width:150px; height:150px; margin:8px auto 8px; }
+  .ring-wrap svg.ring-svg{ transform:rotate(-90deg); width:100%; height:100%; }
   .ring-bg{ fill:none; stroke:var(--bg-panel-raised); stroke-width:9; }
   .ring-fg{ fill:none; stroke-width:9; stroke-linecap:round; transition:stroke-dashoffset 0.2s linear, stroke 0.3s ease; }
   .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .time-display{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:2.5rem; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+  .time-display{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:2rem; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
   .phase-tag{ margin-top:4px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); }
 
-  .next-up{ font-size:0.82rem; color:var(--text-muted); margin:6px 0 20px; min-height:1.2rem; }
+  .next-up{ font-size:0.8rem; color:var(--text-muted); margin:4px 0 10px; min-height:1.2rem; }
   .next-up b{ color:var(--text-primary); font-weight:500; }
 
   .controls{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:6px; }
@@ -126,7 +126,7 @@
   .done-btn:active{ transform:scale(0.98); }
   .stopwatch{ font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; margin-bottom:4px; }
 
-  .footer-row{ display:flex; justify-content:space-between; margin-top:18px; font-size:0.76rem; color:var(--text-muted); }
+  .footer-row{ display:flex; justify-content:space-between; margin-top:10px; font-size:0.76rem; color:var(--text-muted); }
   .footer-row span b{ color:var(--text-primary); }
 
   .voice-toggle{ display:flex; align-items:center; gap:8px; justify-content:center; margin-top:16px; font-size:0.78rem; color:var(--text-muted); }
@@ -158,6 +158,16 @@
   }
   .breakdown-row b{ color:var(--text-primary); font-weight:600; }
 
+  .advanced-settings{ margin-bottom:12px; text-align:left; }
+  .advanced-settings summary{
+    cursor:pointer; list-style:none; font-size:0.78rem; color:var(--text-muted);
+    padding:8px 4px; text-align:center; border:1px solid var(--line); border-radius:10px;
+    background:var(--bg-panel-raised);
+  }
+  .advanced-settings summary::-webkit-details-marker{ display:none; }
+  .advanced-settings[open] summary{ margin-bottom:10px; }
+  .advanced-settings > *:not(summary){ margin-bottom:10px; }
+
   .voice-picker{ text-align:left; background:var(--bg-panel-raised); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
   .voice-picker label{ font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:8px; }
   .voice-picker-row{ display:flex; gap:8px; }
@@ -173,8 +183,6 @@
   .done-screen{ display:none; text-align:center; padding:26px 8px; }
   .done-screen h2{ font-family:'Space Grotesk',sans-serif; font-size:1.4rem; margin-bottom:10px; }
   .done-screen p{ color:var(--text-muted); font-size:0.9rem; }
-
-  @media (max-width:420px){ .ring-wrap{ width:170px; height:170px; } .time-display{ font-size:2.1rem; } }
 </style>
 </head>
 <body>
@@ -202,48 +210,49 @@
         <button class="duration-btn" data-session="5">5</button>
       </div>
 
-      <div class="block-label">Thématiques (décoche ce que tu n'as pas sous la main)</div>
+      <div class="block-label">Thématiques</div>
       <div class="theme-picker" id="themePicker">
         <button class="theme-chip selected" data-theme="rameur">Rameur<span class="chip-time" id="chipTime-rameur"></span></button>
         <button class="theme-chip selected" data-theme="velo">Vélo<span class="chip-time" id="chipTime-velo"></span></button>
-        <button class="theme-chip selected" data-theme="corde">Corde à sauter<span class="chip-time" id="chipTime-corde"></span></button>
+        <button class="theme-chip selected" data-theme="corde">Corde<span class="chip-time" id="chipTime-corde"></span></button>
         <button class="theme-chip selected" data-theme="muscu">Musculation<span class="chip-time" id="chipTime-muscu"></span></button>
-        <button class="theme-chip selected" data-theme="fitness">Fitness / gainage<span class="chip-time" id="chipTime-fitness"></span></button>
+        <button class="theme-chip selected" data-theme="fitness">Fitness<span class="chip-time" id="chipTime-fitness"></span></button>
       </div>
 
-      <div id="machinePrefWrap" style="display:none;">
-        <div class="block-label">Machine cardio pour cette séance</div>
-        <div class="duration-picker" id="machinePicker">
-          <button class="duration-btn selected" data-machine="auto">Auto (varie)</button>
-          <button class="duration-btn" data-machine="row">Rameur</button>
-          <button class="duration-btn" data-machine="bike">Vélo</button>
-        </div>
-      </div>
-
-      <label class="voice-toggle" style="justify-content:center; margin-bottom:14px;">
-        <input type="checkbox" id="skipWarmupCooldownCheckbox" checked> Séance 100% exercices (je gère l'échauffement et les étirements moi-même)
+      <label class="voice-toggle" style="justify-content:center; margin-bottom:10px;">
+        <input type="checkbox" id="skipWarmupCooldownCheckbox" checked> Séance 100% exercices
       </label>
 
-      <div class="breakdown-row">
-        <span>Repos entre les exercices <b id="breakdownRest">—</b></span>
-        <span>Échauffement + retour au calme <b id="breakdownOther">—</b></span>
-      </div>
+      <details class="advanced-settings">
+        <summary>Réglages avancés (voix, machine cardio, détail des temps)</summary>
 
-      <p>Cardio (rameur, vélo, corde à sauter), renfo en répétitions et coordination, mélangés en circuit. Pendant chaque repos, je t'explique et te montre le prochain exercice. Les séries de muscu sont à ton rythme — la durée est donc approximative.</p>
-
-      <label class="voice-toggle" style="justify-content:center; margin-bottom:14px;">
-        <input type="checkbox" id="voiceCheckbox" checked> Annonces vocales activées
-      </label>
-
-      <div class="voice-picker">
-        <label for="voiceSelect">Voix française</label>
-        <div class="voice-picker-row">
-          <select id="voiceSelect"></select>
-          <button class="btn btn-round" id="testVoiceBtn" title="Tester la voix">▶</button>
+        <div id="machinePrefWrap" style="display:none;">
+          <div class="block-label">Machine cardio pour cette séance</div>
+          <div class="duration-picker" id="machinePicker">
+            <button class="duration-btn selected" data-machine="auto">Auto</button>
+            <button class="duration-btn" data-machine="row">Rameur</button>
+            <button class="duration-btn" data-machine="bike">Vélo</button>
+          </div>
         </div>
-        <p class="voice-hint">Privilégie une voix marquée « Enhanced », « Natural » ou « Google » si ta liste en propose une.</p>
-        <p class="voice-hint" id="voiceQualityWarning" style="display:none; color:var(--effort); font-weight:600;">⚠ Aucune voix « Enhanced/Neurale » détectée sur cet appareil — seules les voix basiques (plus robotiques) sont disponibles. Va dans les réglages de synthèse vocale de ton appareil pour en télécharger une meilleure en français (voir infos ci-dessous).</p>
-      </div>
+
+        <div class="breakdown-row">
+          <span>Repos <b id="breakdownRest">—</b></span>
+          <span>Échauff./calme <b id="breakdownOther">—</b></span>
+        </div>
+
+        <label class="voice-toggle" style="justify-content:center; margin-bottom:10px;">
+          <input type="checkbox" id="voiceCheckbox" checked> Annonces vocales activées
+        </label>
+
+        <div class="voice-picker">
+          <label for="voiceSelect">Voix française</label>
+          <div class="voice-picker-row">
+            <select id="voiceSelect"></select>
+            <button class="btn btn-round" id="testVoiceBtn" title="Tester la voix">▶</button>
+          </div>
+          <p class="voice-hint" id="voiceQualityWarning" style="display:none; color:var(--effort); font-weight:600;">⚠ Voix basique détectée (plus robotique) — réglages de synthèse vocale de l'appareil pour en installer une meilleure.</p>
+        </div>
+      </details>
 
       <button class="start-btn" id="startBtn">Démarrer la séance</button>
     </div>
