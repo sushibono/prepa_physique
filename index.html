@@ -290,7 +290,8 @@
           </label>
           <p class="voice-hint" id="voiceStatus">Voix enregistrée : …</p>
           <label for="coachVolume" style="margin-top:8px;">Volume du coach : <b id="coachVolumeVal">100%</b></label>
-          <input type="range" id="coachVolume" min="50" max="300" step="10" value="100" style="width:100%; accent-color:var(--effort);">
+          <input type="range" id="coachVolume" min="50" max="1000" step="10" value="100" style="width:100%; accent-color:var(--effort);">
+          <p class="voice-hint">Au-delà de 300 %, la voix gagne très peu en puissance (l'iPhone est déjà au maximum) : monte aussi le volume de l'iPhone et baisse celui de Spotify.</p>
           <p class="voice-hint" id="voiceDiag">Diagnostic : appuie sur ▶ pour tester.</p>
           <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
         </div>
@@ -380,8 +381,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.7';
-  const APP_BUILD = '2026-10-10 · h';
+  const APP_VERSION = '1.8';
+  const APP_BUILD = '2026-10-10 · i';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
@@ -1119,13 +1120,16 @@
   const COACH_VOL_KEY = 'prepaPhysiqueCoachVol2';
   const coachVolumeEl = document.getElementById('coachVolume');
   const coachVolumeValEl = document.getElementById('coachVolumeVal');
-  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 300) coachVolumeEl.value = v; }catch(e){}
+  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 1000) coachVolumeEl.value = v; }catch(e){}
   coachVolumeValEl.textContent = coachVolumeEl.value + '%';
   coachVolumeEl.addEventListener('input', () => {
     coachVolumeValEl.textContent = coachVolumeEl.value + '%';
     try{ localStorage.setItem(COACH_VOL_KEY, coachVolumeEl.value); }catch(e){}
   });
   function coachGain(){ return parseInt(coachVolumeEl.value, 10) / 100; }
+  coachVolumeEl.addEventListener('change', () => {
+    if(voiceBuffer && audioCtx){ setTimeout(() => { try{ bufferWithGain(voiceBuffer, coachGain()); }catch(e){} }, 30); }
+  });
   function setVoiceStatus(t){ voiceStatusEl.textContent = t; }
   function diag(t){
     let sess = 'non disponible';
@@ -1145,15 +1149,27 @@
   }
 
   // copie du son avec le volume du coach (écrêtage doux pour éviter la saturation) ; mise en cache
+  // g < 1 : simple atténuation ; 1 à 3 : écrêtage doux ; au-delà de 3 : écrêtage doux x3 puis limiteur (pas de saturation)
+  function ampSamples(a, b, g, sr){
+    if(g < 1){ for(let i = 0; i < a.length; i++) b[i] = a[i] * g; return; }
+    const g1 = Math.min(g, 3), g2 = g / g1;
+    if(g2 <= 1.001){ for(let i = 0; i < a.length; i++) b[i] = Math.tanh(a[i] * g1); return; }
+    const k = Math.exp(-1 / (0.12 * sr));
+    let r = 1;
+    for(let i = 0; i < a.length; i++){
+      const v = Math.tanh(a[i] * g1) * g2, m = Math.abs(v);
+      const need = m > 0.95 ? 0.95 / m : 1;
+      if(need < r) r = need; else r = 1 - (1 - r) * k;
+      b[i] = v * r;
+    }
+  }
   let ampBuf = null, ampGain = 0, ampSrc = null;
   function bufferWithGain(buf, g){
     if(Math.abs(g - 1) < 0.01) return buf;
     if(ampBuf && ampSrc === buf && ampGain === g) return ampBuf;
     const out = audioCtx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
     for(let ch = 0; ch < buf.numberOfChannels; ch++){
-      const a = buf.getChannelData(ch), b = out.getChannelData(ch);
-      if(g < 1){ for(let i = 0; i < a.length; i++) b[i] = a[i] * g; }
-      else { for(let i = 0; i < a.length; i++) b[i] = Math.tanh(a[i] * g); }
+      ampSamples(buf.getChannelData(ch), out.getChannelData(ch), g, buf.sampleRate);
     }
     ampBuf = out; ampGain = g; ampSrc = buf;
     return out;
