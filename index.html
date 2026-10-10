@@ -439,6 +439,7 @@
   function unilateralPair(exName, repsText, tip, icon, phase, estDurPerSide, cues){
     const right = withCues(rep(exName + " — côté droit", repsText, tip, icon, phase, estDurPerSide), cues);
     const left  = withCues(rep(exName + " — côté gauche", repsText, tip, icon, phase, estDurPerSide), cues);
+    left.secondSide = true;
     return [right, left];
   }
 
@@ -555,6 +556,90 @@
   const PAUSE_AFTER_CARDIO_SEC = 120;
   const MUSCU_REST_SEC = 20;
 
+
+  // ---------------- Calcul / ré-équilibrage du temps ----------------
+  // Le bloc musculation est élastique : on y ajoute ou retire des exercices (unités) pour que la
+  // séance dure exactement la durée choisie, et le réglage fin se fait sur la pause avant le bloc
+  // corde/fitness (15 à 90 s) et sur le retour au calme (60 à 120 s).
+  let PLAN_CTX = null;
+  let SESSION_CTX = null;
+  let SESSION_TARGET = 0;
+
+  function makeMuscuUnit(ctx, no){
+    const key = ctx.combined[(ctx.nextIdx + ctx.seed.muscuOffset) % ctx.combined.length];
+    const result = EXLIB[key]();
+    const items = Array.isArray(result) ? result : [result];
+    const out = [];
+    items.forEach((ex, i) => {
+      ex.blockName = "Musculation"; ex.mu = no; out.push(ex);
+      if(i < items.length - 1){ const r = rest(15); r.mu = no; out.push(r); }
+    });
+    return out;
+  }
+  function makeMuscuSep(no){ const r = rest(MUSCU_REST_SEC); r.muSep = no; return r; }
+
+  function rebalance(steps, ctx, fromIdx, realElapsed, targetSec){
+    const sumDur = arr => arr.reduce((a, s) => a + getDur(s), 0);
+    let drift = realElapsed + sumDur(steps.slice(fromIdx)) - targetSec;
+    const capacity = () => {
+      let up = 0, down = 0;
+      for(let i = fromIdx; i < steps.length; i++){
+        const e = steps[i].elastic; if(!e) continue;
+        up += e.max - steps[i].dur; down += steps[i].dur - e.min;
+      }
+      return { up, down };
+    };
+    // écart qui resterait après le réglage fin
+    const residual = (d, cap) => d > 0 ? Math.max(0, d - cap.down) : Math.min(0, d + cap.up);
+
+    if(ctx && ctx.muscu){
+      for(let guard = 0; guard < 80 && drift !== 0; guard++){
+        const cap = capacity();
+        const cur = Math.abs(residual(drift, cap));
+        if(cur === 0) break;
+        if(drift > 0){
+          let last = -1;
+          steps.forEach(s => { if(s.mu !== undefined && s.mu > last) last = s.mu; });
+          if(last < 1) break;
+          const idxs = [];
+          steps.forEach((s, i) => { if(s.mu === last || s.muSep === last) idxs.push(i); });
+          if(Math.min(...idxs) <= fromIdx) break;
+          const u = idxs.reduce((a, i) => a + getDur(steps[i]), 0);
+          if(Math.abs(residual(drift - u, cap)) >= cur) break;
+          idxs.sort((a, b) => b - a).forEach(i => steps.splice(i, 1));
+          ctx.nextIdx--; drift -= u;
+        } else {
+          let lastIdx = -1, lastNo = -1;
+          steps.forEach((s, i) => { if(s.mu !== undefined){ lastIdx = i; if(s.mu > lastNo) lastNo = s.mu; } });
+          if(lastIdx < fromIdx) break;
+          const no = lastNo + 1;
+          const sep = makeMuscuSep(no);
+          const unit = makeMuscuUnit(ctx, no);
+          const u = getDur(sep) + sumDur(unit);
+          if(Math.abs(residual(drift + u, cap)) >= cur) break;
+          steps.splice(lastIdx + 1, 0, sep, ...unit);
+          ctx.nextIdx++; drift += u;
+        }
+      }
+    }
+    // réglage fin à la seconde près
+    if(drift !== 0){
+      const cands = [];
+      for(let i = fromIdx; i < steps.length; i++) if(steps[i].elastic) cands.push(steps[i]);
+      cands.sort((a, b) => (a.elastic.prio || 0) - (b.elastic.prio || 0));
+      for(const s of cands){
+        if(drift === 0) break;
+        if(drift > 0){ const cut = Math.min(drift, s.dur - s.elastic.min); s.dur -= cut; drift -= cut; }
+        else { const add = Math.min(-drift, s.elastic.max - s.dur); s.dur += add; drift += add; }
+      }
+    }
+    return drift;
+  }
+
+  function countsAsExercise(s){
+    return s.type !== 'rest' && s.phase !== 'active_recovery' && s.phase !== 'warmup' && !s.secondSide;
+  }
+
   function buildProgram(minutes, sessionIdx, themes){
     const seed = SESSION_SEEDS[(sessionIdx - 1 + SESSION_SEEDS.length) % SESSION_SEEDS.length];
     const totalSec = minutes * 60;
@@ -621,29 +706,6 @@
       }
     }
 
-    // ---- Bloc 1 : cardio machine, un seul outil du début à la fin ----
-    // Protocole "40-20" (40 s effort / 20 s récupération active), puis 2 min de pause avant l'activité suivante.
-    if(primaryMachine && cardioSec > 0){
-      if(warmupMachine && warmupMachine !== primaryMachine) steps.push(rest(30));
-      const cardioActiveRecDur = 20;
-      const roundLen = 40 + cardioActiveRecDur;
-      const rounds = Math.max(1, Math.round(cardioSec / roundLen));
-      const mname = primaryMachine === 'row_machine' ? "Rameur" : "Vélo";
-      const effortTip = primaryMachine === 'row_machine'
-        ? "Rame vite et fort : pousse d'abord avec les jambes, dos droit."
-        : "Pédale fort en restant fluide sur la selle, épaules basses.";
-      const recoveryTip = primaryMachine === 'row_machine'
-        ? "Ne t'arrête pas : rame doucement à faible intensité pour garder le sang qui circule."
-        : "Ne t'arrête pas : pédale doucement à faible intensité pour garder le sang qui circule.";
-      for(let i=0;i<rounds;i++){
-        steps.push(timed(`${mname} — effort ${i+1}/${rounds}`, 40, effortTip, primaryMachine, "effort", mname));
-        if(i < rounds - 1){
-          steps.push(timed(`${mname} — récupération active`, cardioActiveRecDur, recoveryTip, primaryMachine, "active_recovery", mname));
-        }
-      }
-      steps.push(rest(PAUSE_AFTER_CARDIO_SEC));
-    }
-
     // ---- Bloc combiné : corde à sauter EN ALTERNANCE avec les exercices de fitness ----
     // Une série de corde (30 s), puis un exercice de fitness, puis corde, etc. Chaque exercice de
     // fitness n'apparaît qu'une seule fois (pas de doublon). Le temps non utilisé est reversé à la musculation.
@@ -677,35 +739,67 @@
     }
     const comboUsed = comboSteps.reduce((a,s) => a + getDur(s), 0);
 
-    // ---- Bloc musculation : 20 s de repos entre les exercices, absorbe le temps restant ----
+    // ---- Bloc 1 : cardio machine, un seul outil du début à la fin ----
+    // Protocole "40-20" (40 s effort / 20 s récupération active), puis 2 min de pause avant l'activité suivante.
+    if(primaryMachine && cardioSec > 0){
+      if(warmupMachine && warmupMachine !== primaryMachine) steps.push(rest(30));
+      const cardioActiveRecDur = 20;
+      const roundLen = 40 + cardioActiveRecDur;
+      // sans musculation, le temps libre du bloc corde/fitness est reversé au cardio
+      const extraCardio = themes.muscu ? 0 : Math.max(0, comboBudget - comboUsed);
+      const rounds = Math.max(1, Math.round((cardioSec + extraCardio) / roundLen));
+      const mname = primaryMachine === 'row_machine' ? "Rameur" : "Vélo";
+      const effortTip = primaryMachine === 'row_machine'
+        ? "Rame vite et fort : pousse d'abord avec les jambes, dos droit."
+        : "Pédale fort en restant fluide sur la selle, épaules basses.";
+      const recoveryTip = primaryMachine === 'row_machine'
+        ? "Ne t'arrête pas : rame doucement à faible intensité pour garder le sang qui circule."
+        : "Ne t'arrête pas : pédale doucement à faible intensité pour garder le sang qui circule.";
+      for(let i=0;i<rounds;i++){
+        steps.push(timed(`${mname} — effort ${i+1}/${rounds}`, 40, effortTip, primaryMachine, "effort", mname));
+        if(i < rounds - 1){
+          steps.push(timed(`${mname} — récupération active`, cardioActiveRecDur, recoveryTip, primaryMachine, "active_recovery", mname));
+        }
+      }
+      steps.push(rest(PAUSE_AFTER_CARDIO_SEC));
+    }
+
+
+    // ---- Bloc musculation : 20 s de repos entre les exercices, bloc élastique ----
+    const ctx = { muscu: false, combined: [], seed, nextIdx: 0 };
     if(themes.muscu){
       const muscuBudget = muscuSec + Math.max(0, comboBudget - comboUsed);
-      if(muscuBudget > 0){
-        if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
-        const combined = [];
-        const maxLen = Math.max(UPPER.length, LOWER.length);
-        for(let i=0;i<maxLen;i++){ if(UPPER[i]) combined.push(UPPER[i]); if(LOWER[i]) combined.push(LOWER[i]); }
-        let acc = 0, i = 0;
-        while(acc < muscuBudget){
-          const key = combined[(i + seed.muscuOffset) % combined.length];
-          acc += pushExercise(steps, key, "Musculation");
-          i++;
-          if(acc < muscuBudget){ steps.push(rest(MUSCU_REST_SEC)); acc += MUSCU_REST_SEC; }
-        }
+      if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
+      const maxLen = Math.max(UPPER.length, LOWER.length);
+      for(let i=0;i<maxLen;i++){ if(UPPER[i]) ctx.combined.push(UPPER[i]); if(LOWER[i]) ctx.combined.push(LOWER[i]); }
+      ctx.muscu = true;
+      let acc = 0, no = 0;
+      while(no === 0 || acc < muscuBudget){
+        if(no > 0){ const sep = makeMuscuSep(no); steps.push(sep); acc += sep.dur; }
+        const unit = makeMuscuUnit(ctx, no);
+        unit.forEach(s => { steps.push(s); acc += getDur(s); });
+        ctx.nextIdx++; no++;
       }
     }
 
     // ---- Ajout du bloc corde + fitness à la suite ----
     if(comboSteps.length){
-      if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
+      if(steps.length && steps[steps.length-1].type !== 'rest'){
+        const tr = rest(30); tr.elastic = { min:15, max:90, prio:0 }; steps.push(tr);
+      }
       comboSteps.forEach(s => steps.push(s));
     }
 
     // ---- Retour au calme : 2 minutes maximum ----
     if(!skipWU){
-      steps.push(timed("Retour au calme — étirements", cooldownSec, "Étire doucement ischio-jambiers, dos et épaules. Respire lentement.", "stretch", "warmup", "Retour au calme"));
+      const cd = timed("Retour au calme — étirements", cooldownSec, "Étire doucement ischio-jambiers, dos et épaules. Respire lentement.", "stretch", "warmup", "Retour au calme");
+      cd.elastic = { min:60, max:120, prio:1 };
+      steps.push(cd);
     }
 
+    // Durée exacte : on ajuste le plan pour qu'il tombe pile sur la durée choisie
+    rebalance(steps, ctx, 0, 0, totalSec);
+    PLAN_CTX = ctx;
     return steps;
   }
 
@@ -766,7 +860,7 @@
   let stepIdx = 0;
   let timeLeftInStep = 0;
   let elapsedInStepUp = 0;
-  let elapsedTotal = 0;
+  let realElapsed = 0;
   let running = false;
   let timerHandle = null;
   let beepedCount = {};
@@ -950,10 +1044,10 @@
     const step = STEPS[stepIdx];
     const color = PHASE_COLOR[step.phase];
     blockLabel.textContent = step.blockName;
-    const totalEx = STEPS.filter(s => s.type !== 'rest').length;
+    const totalEx = STEPS.filter(countsAsExercise).length;
     let doneEx = 0;
-    for(let i=0;i<=stepIdx;i++){ if(STEPS[i].type !== 'rest') doneEx++; }
-    stepCounter.textContent = doneEx + '/' + totalEx;
+    for(let i=0;i<=stepIdx;i++){ if(countsAsExercise(STEPS[i])) doneEx++; }
+    stepCounter.textContent = doneEx + '/' + totalEx + ' · reste ' + (totalEx - doneEx);
     iconWrap.style.color = color;
     if(step.type === 'rest'){
       iconWrap.style.display = 'none';
@@ -1025,10 +1119,18 @@
     timeDisplay.textContent = fmt(timeLeftInStep);
   }
 
+  function remainingPlanned(){
+    const cur = STEPS[stepIdx];
+    let r = cur.type === 'reps' ? Math.max(0, cur.estDur - elapsedInStepUp) : Math.max(0, timeLeftInStep);
+    for(let i = stepIdx + 1; i < STEPS.length; i++) r += getDur(STEPS[i]);
+    return r;
+  }
   function updateFooter(){
-    elapsedLabel.textContent = fmt(elapsedTotal);
-    const pct = Math.max(0, Math.min(100, (elapsedTotal / TOTAL_ESTIMATED) * 100));
-    progressFill.style.width = pct + '%';
+    elapsedLabel.textContent = fmt(realElapsed);
+    const rem = remainingPlanned();
+    const total = realElapsed + rem;
+    progressFill.style.width = Math.max(0, Math.min(100, total > 0 ? (realElapsed / total) * 100 : 0)) + '%';
+    totalTimeLabel.textContent = '≈ ' + fmt(total);
   }
 
   function spokenAdvice(step){
@@ -1046,12 +1148,11 @@
     } else { speak(step.ex + '. ' + spokenAdvice(step)); }
   }
 
-  function goToStep(idx, announce){
+  function goToStep(idx, announce, adjustPlan){
     if(idx < 0) idx = 0;
     if(idx >= STEPS.length){ finishWorkout(); return; }
-    elapsedTotal = 0;
-    for(let i=0;i<idx;i++) elapsedTotal += getDur(STEPS[i]);
     stepIdx = idx;
+    if(adjustPlan) rebalance(STEPS, SESSION_CTX, idx, realElapsed, SESSION_TARGET);
     const step = STEPS[idx];
     timeLeftInStep = step.type === 'reps' ? 0 : step.dur;
     elapsedInStepUp = 0;
@@ -1062,7 +1163,7 @@
 
   function tick(){
     const step = STEPS[stepIdx];
-    elapsedTotal += 1;
+    realElapsed += 1;
 
     if(step.type === 'reps'){
       elapsedInStepUp += 1;
@@ -1079,7 +1180,7 @@
     if(timeLeftInStep <= 0){
       if(stepIdx + 1 >= STEPS.length){ finishWorkout(); return; }
       beep(660, 0.25);
-      goToStep(stepIdx + 1, true);
+      goToStep(stepIdx + 1, true, true);
       return;
     }
     updateRing();
@@ -1185,7 +1286,7 @@
     liveScreen.style.display = 'none';
     if(!workoutRecorded){
       workoutRecorded = true;
-      saveStat({ t: new Date().toISOString(), planned: selectedMinutes, session: selectedSession, secs: elapsedTotal });
+      saveStat({ t: new Date().toISOString(), planned: selectedMinutes, session: selectedSession, secs: realElapsed });
     }
     doneCards.innerHTML = statsCardsHtml();
     doneScreen.style.display = 'block';
@@ -1211,11 +1312,12 @@
     selectedThemes.skipWarmupCooldown = skipWarmupCooldown;
     workoutRecorded = false;
     STEPS = buildProgram(selectedMinutes, selectedSession, selectedThemes);
-    TOTAL_ESTIMATED = STEPS.reduce((s, st) => s + getDur(st), 0);
-    totalTimeLabel.textContent = '≈ ' + fmt(TOTAL_ESTIMATED);
+    SESSION_CTX = PLAN_CTX;
+    SESSION_TARGET = selectedMinutes * 60;
+    realElapsed = 0;
     startScreen.style.display = 'none';
     liveScreen.style.display = 'block';
-    goToStep(0, true);
+    goToStep(0, true, false);
     startTimer();
   });
 
@@ -1226,7 +1328,7 @@
   });
   skipFwdBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx + 1, true); });
   skipBackBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx - 1, true); });
-  repsDoneBtn.addEventListener('click', () => { ensureAudioCtx(); beep(660,0.2); goToStep(stepIdx + 1, true); });
+  repsDoneBtn.addEventListener('click', () => { ensureAudioCtx(); beep(660,0.2); goToStep(stepIdx + 1, true, true); });
   backHomeBtn.addEventListener('click', () => { resetToHome(); });
   document.getElementById('statsBtn').addEventListener('click', () => showStats('home'));
   document.getElementById('doneStatsBtn').addEventListener('click', () => showStats('done'));
