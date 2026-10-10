@@ -290,7 +290,7 @@
           </label>
           <p class="voice-hint" id="voiceStatus">Voix enregistrée : …</p>
           <label for="coachVolume" style="margin-top:8px;">Volume du coach : <b id="coachVolumeVal">100%</b></label>
-          <input type="range" id="coachVolume" min="50" max="200" step="10" value="100" style="width:100%; accent-color:var(--effort);">
+          <input type="range" id="coachVolume" min="50" max="300" step="10" value="100" style="width:100%; accent-color:var(--effort);">
           <p class="voice-hint" id="voiceDiag">Diagnostic : appuie sur ▶ pour tester.</p>
           <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
         </div>
@@ -380,8 +380,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.6';
-  const APP_BUILD = '2026-10-10 · g';
+  const APP_VERSION = '1.7';
+  const APP_BUILD = '2026-10-10 · h';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
@@ -1119,7 +1119,7 @@
   const COACH_VOL_KEY = 'prepaPhysiqueCoachVol2';
   const coachVolumeEl = document.getElementById('coachVolume');
   const coachVolumeValEl = document.getElementById('coachVolumeVal');
-  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 200) coachVolumeEl.value = v; }catch(e){}
+  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 300) coachVolumeEl.value = v; }catch(e){}
   coachVolumeValEl.textContent = coachVolumeEl.value + '%';
   coachVolumeEl.addEventListener('input', () => {
     coachVolumeValEl.textContent = coachVolumeEl.value + '%';
