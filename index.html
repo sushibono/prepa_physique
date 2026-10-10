@@ -281,6 +281,7 @@
           <div class="voice-picker-row">
             <select id="audioModeSelect">
               <option value="ambient">Mixer avec ma musique (recommandé)</option>
+              <option value="duck">Baisser la musique pendant les annonces (expérimental)</option>
               <option value="pause">Pauser la musique pendant les annonces (Spotify ne reprend pas toujours)</option>
               <option value="auto">Réglage Safari par défaut</option>
             </select>
@@ -381,8 +382,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.8';
-  const APP_BUILD = '2026-10-10 · i';
+  const APP_VERSION = '1.9';
+  const APP_BUILD = '2026-10-10 · j';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
@@ -1069,7 +1070,7 @@
   // ---- Cohabitation avec la musique (Spotify…) : API Audio Session de Safari (iOS 16.4+) ----
   const AUDIO_MODE_KEY = 'prepaPhysiqueAudioMode3';
   let audioMode = 'ambient';
-  try{ const m = localStorage.getItem(AUDIO_MODE_KEY); if(m === 'ambient' || m === 'pause' || m === 'auto') audioMode = m; }catch(e){}
+  try{ const m = localStorage.getItem(AUDIO_MODE_KEY); if(m === 'ambient' || m === 'pause' || m === 'duck' || m === 'auto') audioMode = m; }catch(e){}
   let speechSeq = 0;
   let announcing = false;   // vrai pendant qu'une annonce enregistrée est en cours
   function setAudioSession(type){
@@ -1097,6 +1098,7 @@
       u.rate = 0.95; u.pitch = 0.95;
       const seq = ++speechSeq;
       if(audioMode === 'pause') setAudioSession('transient-solo');   // musique en pause pendant l'annonce
+      else if(audioMode === 'duck') setAudioSession('transient');
       const done = () => { if(seq === speechSeq) applyAudioMode(); }; // puis la musique reprend
       u.onend = done; u.onerror = done;
       window.speechSynthesis.speak(u);
@@ -1207,6 +1209,7 @@
     if('speechSynthesis' in window){ try{ window.speechSynthesis.cancel(); }catch(e){} }
     announcing = true;
     if(audioMode === 'pause') setAudioSession('transient-solo');   // la musique se met en pause pendant l'annonce
+    else if(audioMode === 'duck') setAudioSession('transient');     // la musique baisse pendant l'annonce (si iOS le permet)
     loadVoiceBuffer().then(buf => {
       if(seq !== voiceSeq) return;
       ensureAudioCtx();
@@ -1233,7 +1236,7 @@
           if(seq !== voiceSeq) return;
           voiceNodes = []; voiceEndTimer = null; announcing = false;
           applyAudioMode();                                          // la musique reprend
-          if(audioMode === 'pause' && audioCtx && audioCtx.suspend){ try{ audioCtx.suspend(); }catch(e){} }   // libère la session audio
+          if((audioMode === 'pause' || audioMode === 'duck') && audioCtx && audioCtx.suspend){ try{ audioCtx.suspend(); }catch(e){} }   // libère la session audio
         }, total * 1000 + 150);
       };
       if(audioCtx.state === 'suspended' && audioCtx.resume){
