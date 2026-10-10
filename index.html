@@ -289,8 +289,8 @@
             <input type="checkbox" id="useRecordedVoice" checked> Voix coach enregistrée (laisse ta musique)
           </label>
           <p class="voice-hint" id="voiceStatus">Voix enregistrée : …</p>
-          <label for="coachVolume" style="margin-top:8px;">Volume du coach : <b id="coachVolumeVal">200%</b></label>
-          <input type="range" id="coachVolume" min="50" max="300" step="10" value="200" style="width:100%; accent-color:var(--effort);">
+          <label for="coachVolume" style="margin-top:8px;">Volume du coach : <b id="coachVolumeVal">100%</b></label>
+          <input type="range" id="coachVolume" min="50" max="200" step="10" value="100" style="width:100%; accent-color:var(--effort);">
           <p class="voice-hint" id="voiceDiag">Diagnostic : appuie sur ▶ pour tester.</p>
           <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
         </div>
@@ -380,8 +380,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.4';
-  const APP_BUILD = '2026-10-10 · e';
+  const APP_VERSION = '1.6';
+  const APP_BUILD = '2026-10-10 · g';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
@@ -1116,10 +1116,10 @@
   useRecordedVoiceEl.addEventListener('change', () => {
     try{ localStorage.setItem(REC_VOICE_KEY, useRecordedVoiceEl.checked ? '1' : '0'); }catch(e){}
   });
-  const COACH_VOL_KEY = 'prepaPhysiqueCoachVol';
+  const COACH_VOL_KEY = 'prepaPhysiqueCoachVol2';
   const coachVolumeEl = document.getElementById('coachVolume');
   const coachVolumeValEl = document.getElementById('coachVolumeVal');
-  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 300) coachVolumeEl.value = v; }catch(e){}
+  try{ const v = parseInt(localStorage.getItem(COACH_VOL_KEY), 10); if(v >= 50 && v <= 200) coachVolumeEl.value = v; }catch(e){}
   coachVolumeValEl.textContent = coachVolumeEl.value + '%';
   coachVolumeEl.addEventListener('input', () => {
     coachVolumeValEl.textContent = coachVolumeEl.value + '%';
@@ -1144,6 +1144,20 @@
     setVoiceStatus('Voix enregistrée : non installée → voix de secours utilisée');
   }
 
+  // copie du son avec le volume du coach (écrêtage doux pour éviter la saturation) ; mise en cache
+  let ampBuf = null, ampGain = 0, ampSrc = null;
+  function bufferWithGain(buf, g){
+    if(Math.abs(g - 1) < 0.01) return buf;
+    if(ampBuf && ampSrc === buf && ampGain === g) return ampBuf;
+    const out = audioCtx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+    for(let ch = 0; ch < buf.numberOfChannels; ch++){
+      const a = buf.getChannelData(ch), b = out.getChannelData(ch);
+      if(g < 1){ for(let i = 0; i < a.length; i++) b[i] = a[i] * g; }
+      else { for(let i = 0; i < a.length; i++) b[i] = Math.tanh(a[i] * g); }
+    }
+    ampBuf = out; ampGain = g; ampSrc = buf;
+    return out;
+  }
   function loadVoiceBuffer(){
     if(voiceBuffer) return Promise.resolve(voiceBuffer);
     if(voiceDecoding) return voiceDecoding;
@@ -1183,19 +1197,15 @@
       const start = () => {
         if(seq !== voiceSeq) return;
         let t = audioCtx.currentTime + 0.15;
-        // volume du coach réglable (jusqu'à x3) + compresseur pour éviter toute saturation
-        const out = audioCtx.createGain();
-        out.gain.value = coachGain();
-        if(audioCtx.createDynamicsCompressor){
-          const comp = audioCtx.createDynamicsCompressor();
-          comp.threshold.value = -20; comp.knee.value = 12; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.2;
-          out.connect(comp); comp.connect(audioCtx.destination);
-        } else { out.connect(audioCtx.destination); }
+        // trajet audio toujours direct (source -> sortie) ; le volume est appliqué dans les données sonores elles-mêmes
+        const sink = audioCtx.destination;
+        let playBuf = buf;
+        try{ playBuf = bufferWithGain(buf, coachGain()); }catch(e){ playBuf = buf; }
         frags.forEach(txt => {
           const k = VOICE_INDEX[txt];
           const src = audioCtx.createBufferSource();
-          src.buffer = buf;
-          src.connect(out);
+          src.buffer = playBuf;
+          src.connect(sink);
           const d = (k[1] - k[0]) + 0.1;
           src.start(t, Math.max(0, k[0] - 0.05), d);
           voiceNodes.push(src);
