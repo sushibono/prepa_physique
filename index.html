@@ -184,6 +184,18 @@
   .done-screen h2{ font-family:'Space Grotesk',sans-serif; font-size:1.4rem; margin-bottom:10px; }
   .done-screen p{ color:var(--text-muted); font-size:0.9rem; }
   .app-version{ margin-top:10px; font-size:0.68rem; color:var(--text-muted); text-align:center; opacity:0.8; }
+  .resume-card{ background:var(--bg-panel-raised); border:1px solid var(--strength); border-radius:12px; padding:10px 12px; margin-bottom:12px; text-align:left; }
+  .resume-title{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.95rem; }
+  .resume-sub{ font-size:0.78rem; color:var(--text-muted); margin:3px 0 8px; line-height:1.35; }
+  .resume-actions{ display:flex; gap:8px; }
+  .resume-actions button{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--bg-panel);
+    color:var(--text-primary); font-family:'Inter',sans-serif; font-weight:600; font-size:0.85rem; cursor:pointer; }
+  .resume-actions button#resumeBtn{ background:var(--strength); border-color:var(--strength); color:#181818; }
+  .combo-table{ width:100%; border-collapse:separate; border-spacing:3px; margin:8px 0 4px; }
+  .combo-table th{ font-size:0.7rem; color:var(--text-muted); font-weight:600; padding:4px 2px; }
+  .combo-table td{ background:var(--bg-panel-raised); border-radius:6px; padding:9px 2px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.95rem; }
+  .combo-table td.tot{ background:none; color:var(--text-muted); }
+  .combo-note{ font-size:0.7rem; color:var(--text-muted); margin:0 0 8px; }
   .stats-link{ width:100%; margin-top:8px; background:none; border:1px solid var(--line); color:var(--text-muted);
     border-radius:12px; padding:10px; font-family:'Inter',sans-serif; font-size:0.85rem; cursor:pointer; }
   .stat-cards{ display:flex; gap:8px; margin:10px 0; }
@@ -217,6 +229,14 @@
   <div class="panel" id="mainPanel">
 
     <div id="startScreen" class="start-screen">
+      <div id="resumeCard" class="resume-card" style="display:none;">
+        <div class="resume-title">Séance en cours</div>
+        <div class="resume-sub" id="resumeSub"></div>
+        <div class="resume-actions">
+          <button id="resumeBtn">▶ Reprendre</button>
+          <button id="abandonBtn">Abandonner</button>
+        </div>
+      </div>
       <div class="block-label">Choisis la durée</div>
       <div class="duration-picker" id="durationPicker">
         <button class="duration-btn" data-min="15">15 min</button>
@@ -370,8 +390,10 @@
         <button class="stats-tab selected" data-tab="week">Semaines</button>
         <button class="stats-tab" data-tab="month">Mois</button>
         <button class="stats-tab" data-tab="year">Années</button>
+        <button class="stats-tab" data-tab="combo">Séances</button>
       </div>
       <div class="stats-chart" id="statsChart"></div>
+      <div id="statsCombo" style="display:none;"></div>
       <div class="stats-empty" id="statsEmpty">Aucune séance enregistrée pour l'instant — elles apparaîtront ici dès la fin de ta prochaine séance.</div>
       <button class="stats-link" id="statsBackBtn">← Retour</button>
     </div>
@@ -382,12 +404,12 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.9';
-  const APP_BUILD = '2026-10-10 · j';
+  const APP_VERSION = '2.0';
+  const APP_BUILD = '2026-10-10 · k';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
-  const VOICE_INDEX = /*VOICE_INDEX_START*/{"Voici un exemple de voix pour t'accompagner pendant ta séance.":[0.6,3.73],"Séance terminée, bravo !":[4.18,6.013],"Échauffement — rameur, allure d'échauffement":[6.463,9.069],"Rame doucement, allure facile : monte progressivement, dos droit, épaules basses.":[9.519,14.431],"Rameur — effort":[14.881,16.345],"Rame vite et fort : pousse d'abord avec les jambes, dos droit.":[16.795,20.218],"Rameur — récupération active":[20.668,22.729],"Repos":[23.179,23.828],"Ensuite":[24.278,25.04],"Retour au calme — étirements":[25.49,27.393],"Étire doucement ischio-jambiers, dos et épaules. Respire lentement.":[27.843,31.457],"Échauffement — vélo, allure d'échauffement":[31.907,34.41],"Pédale doucement, allure facile : monte progressivement, épaules basses.":[34.86,39.127],"Vélo — effort":[39.577,40.923],"Pédale fort en restant fluide sur la selle, épaules basses.":[41.373,44.858],"Vélo — récupération active":[45.308,47.247],"Échauffement — corde à sauter légère":[47.697,49.664],"Petits bonds réguliers pour monter en température.":[50.114,52.646],"Corde à sauter":[53.096,54.122],"Petits bonds réguliers, poignets qui font tourner la corde, regarde devant toi.":[54.572,58.408],"Échauffement — mobilité articulaire":[58.858,61.08],"Mobilise épaules, hanches et chevilles, monte doucement en intensité.":[61.53,65.31],"Développé couché":[65.76,66.866],"Objectif : 12 répétitions (les deux bras ensemble)":[67.316,71.234],"Barre ou haltères au niveau de la poitrine, coudes à 45°":[71.684,75.306],"Pousse en expirant, bras presque tendus en haut":[75.756,78.249],"Redescends lentement, pieds ancrés au sol":[78.699,80.856],"Squats haltères":[81.306,82.344],"Objectif : 15 répétitions (les deux jambes ensemble)":[82.794,86.049],"Pieds largeur d'épaules, orteils légèrement ouverts":[86.499,89.389],"Les hanches reculent en premier, dos reste droit":[89.839,92.687],"Descends jusqu'aux cuisses parallèles, poids sur les talons":[93.137,95.856],"Rowing haltère — côté droit":[96.306,98.143],"Objectif : 12 répétitions":[98.593,100.687],"Dos plat, buste penché en avant à 45°":[101.137,104.092],"Tire le coude vers la hanche, pas vers l'épaule":[104.542,106.963],"Contracte l'omoplate en haut du mouvement":[107.413,109.373],"Rowing haltère — côté gauche":[109.823,111.76],"Fentes marchées, jambe avant — côté droit":[112.21,114.697],"Grand pas devant, buste droit":[115.147,117.115],"Le genou arrière frôle le sol sans le toucher":[117.565,119.925],"Pousse sur le talon avant pour te relever":[120.375,122.341],"Fentes marchées, jambe avant — côté gauche":[122.791,125.251],"Élévations latérales":[125.701,127.061],"Objectif : 15 répétitions (les deux bras ensemble)":[127.511,130.656],"Bras légèrement fléchis, jamais tendus":[131.106,133.271],"Monte jusqu'à hauteur d'épaule, pas plus haut":[133.721,135.983],"Redescends lentement, sans élan du buste":[136.433,138.692],"Extension de hanche, élastique — côté droit":[139.142,141.857],"Objectif : 15 répétitions":[142.307,144.231],"Élastique fixé au niveau des chevilles":[144.681,146.78],"Jambe tendue, pousse vers l'arrière":[147.229,149.094],"Contracte le fessier en haut, sans cambrer le dos":[149.544,151.964],"Extension de hanche, élastique — côté gauche":[152.414,155.306],"Curl biceps":[155.756,156.578],"Coudes collés au corps, immobiles":[157.027,158.828],"Monte en expirant, sans balancer le dos":[159.278,161.484],"Redescends lentement, 2 secondes de contrôle":[161.934,164.476],"Élévations mollets haltères":[164.926,166.457],"Objectif : 20 répétitions (les deux jambes ensemble)":[166.907,170.262],"Haltères le long du corps, pieds à plat":[170.712,172.632],"Monte sur la pointe des pieds, contracte les mollets":[173.082,175.576],"Redescends lentement sans laisser retomber les talons":[176.025,178.448],"Extension triceps haltère (nuque)":[178.898,181.288],"Haltère tenu à deux mains derrière la nuque, coudes vers le haut":[181.738,184.806],"Étends les bras vers le plafond sans bouger les coudes":[185.256,187.754],"Redescends lentement derrière la tête, contrôle le mouvement":[188.204,191.06],"Roue abdominale":[191.51,192.686],"Objectif : 10 répétitions (les deux mains ensemble)":[193.136,196.224],"Genoux au sol, mains posées sur la roue":[196.674,198.887],"Roule vers l'avant tant que le dos reste gainé":[199.337,201.821],"Reviens dès que le bas du dos veut se creuser":[202.271,204.868],"Élastique, rotation du buste — côté droit":[205.318,208.043],"Élastique tendu devant toi, bras tendus":[208.493,210.899],"Pivote uniquement le buste, hanches fixes":[211.349,213.874],"Reviens lentement au centre, sans à-coup":[214.324,216.649],"Élastique, rotation du buste — côté gauche":[217.099,220.0],"Power plate, squat isométrique":[220.45,222.182],"Cuisses proches de la parallèle au sol":[222.632,224.521],"Genoux alignés avec les pieds, pas vers l'intérieur":[224.971,227.588],"Gaine le ventre, respire normalement pendant la tenue":[228.038,230.996],"Planche (gainage)":[231.446,232.884],"Avant-bras au sol, coudes sous les épaules":[233.334,235.516],"Corps aligné tête-bassin-talons, sans creux ni bosse":[235.966,238.726],"Serre fessiers et ventre pendant toute la tenue":[239.176,241.544],"Chaise (dos au mur)":[241.994,243.793],"Dos entièrement plaqué contre le mur":[244.243,246.353],"Genoux à 90°, alignés avec les chevilles":[246.803,249.643],"Bras relâchés, respire normalement":[250.093,252.454],"Power plate — mollets isométriques":[252.904,254.89],"Pointes de pieds sur la plateforme, talons levés":[255.34,257.609],"Contracte les mollets, garde l'équilibre":[258.059,260.461],"Respire normalement pendant toute la tenue":[260.911,263.241],"Power plate — fente isométrique":[263.691,265.569],"Pied avant sur la plateforme, genou à 90°":[266.019,269.149],"Jambe arrière tendue, appui sur l'orteil":[269.599,272.003],"Buste droit pendant toute la tenue":[272.453,274.455],"Développé épaules haltères":[274.905,276.386],"Haltères à hauteur d'épaules, coudes sous les mains":[276.836,278.992],"Pousse vers le haut jusqu'à bras presque tendus":[279.442,281.906],"Redescends lentement, sans cambrer le bas du dos":[282.356,284.906]}/*VOICE_INDEX_END*/;
+  const VOICE_INDEX = /*VOICE_INDEX_START*/{"Voici un exemple de voix pour t'accompagner pendant ta séance.":[0.6,3.873],"Séance terminée, bravo !":[4.323,6.209],"Échauffement — rameur, allure d'échauffement":[6.659,9.131],"Rame doucement, allure facile : monte progressivement, dos droit, épaules basses.":[9.581,14.544],"Rameur — effort":[14.994,16.476],"Rame vite et fort : pousse d'abord avec les jambes, dos droit.":[16.926,20.566],"Rameur — récupération active":[21.016,23.288],"Repos":[23.738,24.33],"Ensuite":[24.78,25.581],"Retour au calme — étirements":[26.031,27.936],"Étire doucement ischio-jambiers, dos et épaules. Respire lentement.":[28.386,32.33],"Échauffement — vélo, allure d'échauffement":[32.78,35.232],"Pédale doucement, allure facile : monte progressivement, épaules basses.":[35.682,39.693],"Vélo — effort":[40.142,41.481],"Pédale fort en restant fluide sur la selle, épaules basses.":[41.931,45.496],"Vélo — récupération active":[45.946,47.893],"Échauffement — corde à sauter légère":[48.343,50.308],"Petits bonds réguliers pour monter en température.":[50.758,53.289],"Corde à sauter":[53.739,54.77],"Petits bonds réguliers, poignets qui font tourner la corde, regarde devant toi.":[55.22,59.191],"Échauffement — mobilité articulaire":[59.641,61.808],"Mobilise épaules, hanches et chevilles, monte doucement en intensité.":[62.258,66.051],"Développé couché":[66.501,67.692],"Objectif : 12 répétitions (les deux bras ensemble)":[68.142,71.984],"Barre ou haltères au niveau de la poitrine, coudes à 45°":[72.434,76.189],"Pousse en expirant, bras presque tendus en haut":[76.639,79.129],"Redescends lentement, pieds ancrés au sol":[79.579,81.751],"Rowing haltère — côté droit":[82.201,83.993],"Objectif : 12 répétitions":[84.443,86.279],"Dos plat, buste penché en avant à 45°":[86.729,89.728],"Tire le coude vers la hanche, pas vers l'épaule":[90.178,92.643],"Contracte l'omoplate en haut du mouvement":[93.093,95.199],"Rowing haltère — côté gauche":[95.649,97.62],"Squats haltères":[98.07,99.048],"Objectif : 15 répétitions (les deux jambes ensemble)":[99.498,102.667],"Pieds largeur d'épaules, orteils légèrement ouverts":[103.117,105.805],"Les hanches reculent en premier, dos reste droit":[106.255,109.28],"Descends jusqu'aux cuisses parallèles, poids sur les talons":[109.73,112.391],"Développé épaules haltères":[112.841,114.359],"Haltères à hauteur d'épaules, coudes sous les mains":[114.809,117.113],"Pousse vers le haut jusqu'à bras presque tendus":[117.563,119.837],"Redescends lentement, sans cambrer le bas du dos":[120.287,122.759],"Élévations mollets haltères":[123.209,124.744],"Objectif : 20 répétitions (les deux jambes ensemble)":[125.194,128.356],"Haltères le long du corps, pieds à plat":[128.806,130.646],"Monte sur la pointe des pieds, contracte les mollets":[131.096,133.626],"Redescends lentement sans laisser retomber les talons":[134.076,136.524],"Oiseau haltères":[136.974,137.864],"Buste penché à 45°, dos plat, haltères sous les épaules":[138.314,142.288],"Ouvre les bras sur les côtés, coudes légèrement fléchis":[142.738,145.309],"Serre les omoplates en haut, redescends lentement":[145.759,148.194],"Élévations latérales":[148.644,149.974],"Objectif : 15 répétitions (les deux bras ensemble)":[150.424,153.594],"Bras légèrement fléchis, jamais tendus":[154.044,156.14],"Monte jusqu'à hauteur d'épaule, pas plus haut":[156.59,158.822],"Redescends lentement, sans élan du buste":[159.272,161.588],"Fentes marchées, jambe avant — côté droit":[162.038,164.365],"Grand pas devant, buste droit":[164.815,166.799],"Le genou arrière frôle le sol sans le toucher":[167.249,169.515],"Pousse sur le talon avant pour te relever":[169.965,171.915],"Fentes marchées, jambe avant — côté gauche":[172.365,174.985],"Curl biceps":[175.435,176.445],"Coudes collés au corps, immobiles":[176.895,178.708],"Monte en expirant, sans balancer le dos":[179.158,181.41],"Redescends lentement, 2 secondes de contrôle":[181.86,184.45],"Roue abdominale":[184.9,186.051],"Objectif : 10 répétitions (les deux mains ensemble)":[186.501,189.644],"Genoux au sol, mains posées sur la roue":[190.094,192.323],"Roule vers l'avant tant que le dos reste gainé":[192.773,195.147],"Reviens dès que le bas du dos veut se creuser":[195.597,197.986],"Superman, renfort du dos":[198.436,200.41],"Allongé sur le ventre, bras tendus devant toi":[200.86,203.55],"Lève en même temps les bras et les jambes, regard vers le sol":[204.0,207.371],"Tiens une seconde en haut, redescends lentement":[207.821,210.068],"Planche (gainage)":[210.518,211.926],"Avant-bras au sol, coudes sous les épaules":[212.376,214.606],"Corps aligné tête-bassin-talons, sans creux ni bosse":[215.056,217.616],"Serre fessiers et ventre pendant toute la tenue":[218.066,220.625],"Power plate, squat isométrique":[221.075,222.915],"Cuisses proches de la parallèle au sol":[223.365,225.22],"Genoux alignés avec les pieds, pas vers l'intérieur":[225.67,228.293],"Gaine le ventre, respire normalement pendant la tenue":[228.743,231.718],"Élastique, rotation du buste — côté droit":[232.167,235.006],"Élastique tendu devant toi, bras tendus":[235.456,237.945],"Pivote uniquement le buste, hanches fixes":[238.395,240.886],"Reviens lentement au centre, sans à-coup":[241.336,243.526],"Élastique, rotation du buste — côté gauche":[243.976,246.896],"Gainage latéral — côté droit":[247.346,249.383],"Appui sur l'avant-bras, coude sous l'épaule":[249.833,251.983],"Corps aligné de la tête aux pieds, hanche haute":[252.433,254.722],"Serre le ventre, respire normalement":[255.172,257.486],"Gainage latéral — côté gauche":[257.936,260.262],"Bird dog — côté droit":[260.712,262.27],"Objectif : 10 répétitions":[262.72,264.875],"À quatre pattes, mains sous les épaules, genoux sous les hanches":[265.325,268.412],"Tends un bras et la jambe opposée, à l'horizontale":[268.862,271.567],"Garde le bassin immobile, reviens lentement":[272.017,274.672],"Bird dog — côté gauche":[275.122,276.943],"Power plate — mollets isométriques":[277.393,279.252],"Pointes de pieds sur la plateforme, talons levés":[279.701,282.028],"Contracte les mollets, garde l'équilibre":[282.478,284.888],"Respire normalement pendant toute la tenue":[285.338,287.732],"Crunchs":[288.182,289.139],"Objectif : 15 répétitions":[289.589,291.508],"Allongé sur le dos, genoux fléchis, mains près des tempes":[291.958,294.794],"Décolle les épaules en contractant le ventre, sans tirer sur la nuque":[295.244,298.625],"Redescends lentement sans te relâcher complètement":[299.075,301.84],"Extension triceps haltère (nuque)":[302.29,304.423],"Haltère tenu à deux mains derrière la nuque, coudes vers le haut":[304.873,307.854],"Étends les bras vers le plafond sans bouger les coudes":[308.304,310.97],"Redescends lentement derrière la tête, contrôle le mouvement":[311.42,314.164],"Chaise (dos au mur)":[314.614,316.477],"Dos entièrement plaqué contre le mur":[316.927,318.916],"Genoux à 90°, alignés avec les chevilles":[319.366,322.222],"Bras relâchés, respire normalement":[322.672,324.903],"Relevés de jambes":[325.353,326.475],"Allongé sur le dos, mains sous les fesses, dos plaqué au sol":[326.925,330.625],"Monte les jambes tendues jusqu'à la verticale":[331.075,333.531],"Redescends lentement sans cambrer le bas du dos":[333.981,336.239],"Rotations russes":[336.689,337.739],"Objectif : 20 répétitions":[338.189,340.186],"Assis, buste incliné en arrière, pieds décollés ou au sol":[340.636,344.028],"Tiens un haltère à deux mains devant le ventre":[344.478,346.707],"Tourne le buste d'un côté puis de l'autre, en contrôle":[347.157,350.224],"Power plate — fente isométrique":[350.674,352.568],"Pied avant sur la plateforme, genou à 90°":[353.018,355.845],"Jambe arrière tendue, appui sur l'orteil":[356.295,358.645],"Buste droit pendant toute la tenue":[359.095,361.098],"Extension de hanche, élastique — côté droit":[361.548,364.597],"Élastique fixé au niveau des chevilles":[365.046,367.172],"Jambe tendue, pousse vers l'arrière":[367.622,369.476],"Contracte le fessier en haut, sans cambrer le dos":[369.926,372.467],"Extension de hanche, élastique — côté gauche":[372.917,375.846]}/*VOICE_INDEX_END*/;
 
 
   // ---------------- ICONS ----------------
@@ -418,6 +440,19 @@
                 b:`<circle cx="60" cy="18" r="10"/><line x1="60" y1="28" x2="60" y2="58"/><line x1="60" y1="32" x2="45" y2="42"/><line x1="60" y1="32" x2="75" y2="42"/><line x1="60" y1="58" x2="52" y2="80"/><line x1="60" y1="58" x2="68" y2="80"/><path d="M45,42 Q60,-4 75,42" stroke-dasharray="4 5"/>` },
     stretch: `<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="35" x2="38" y2="14"/><line x1="60" y1="35" x2="82" y2="14"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
     plank: `<circle cx="22" cy="55" r="9"/><line x1="22" y1="63" x2="98" y2="76"/><line x1="26" y1="63" x2="18" y2="92"/><line x1="92" y1="74" x2="96" y2="96"/>`,
+    revfly: { a:`<circle cx="60" cy="36" r="9"/><line x1="60" y1="46" x2="60" y2="76"/><line x1="60" y1="50" x2="46" y2="82"/><line x1="60" y1="50" x2="74" y2="82"/><line x1="60" y1="76" x2="48" y2="108"/><line x1="60" y1="76" x2="72" y2="108"/>`,
+              b:`<circle cx="60" cy="36" r="9"/><line x1="60" y1="46" x2="60" y2="76"/><line x1="60" y1="52" x2="22" y2="60"/><line x1="60" y1="52" x2="98" y2="60"/><line x1="60" y1="76" x2="48" y2="108"/><line x1="60" y1="76" x2="72" y2="108"/>` },
+    superman: { a:`<circle cx="26" cy="74" r="9"/><line x1="35" y1="78" x2="90" y2="80"/><line x1="35" y1="78" x2="8" y2="82"/><line x1="90" y1="80" x2="114" y2="82"/><line x1="4" y1="96" x2="116" y2="96"/>`,
+                b:`<circle cx="28" cy="62" r="9"/><line x1="37" y1="68" x2="90" y2="80"/><line x1="37" y1="68" x2="10" y2="50"/><line x1="90" y1="80" x2="114" y2="62"/><line x1="4" y1="96" x2="116" y2="96"/>` },
+    birddog: { a:`<circle cx="40" cy="52" r="9"/><line x1="40" y1="61" x2="82" y2="63"/><line x1="44" y1="62" x2="40" y2="92"/><line x1="48" y1="62" x2="48" y2="92"/><line x1="82" y1="63" x2="80" y2="92"/><line x1="86" y1="63" x2="88" y2="92"/><line x1="4" y1="96" x2="116" y2="96"/>`,
+               b:`<circle cx="40" cy="52" r="9"/><line x1="40" y1="61" x2="82" y2="63"/><line x1="44" y1="62" x2="40" y2="92"/><line x1="48" y1="62" x2="12" y2="58"/><line x1="82" y1="63" x2="80" y2="92"/><line x1="86" y1="63" x2="116" y2="60"/><line x1="4" y1="96" x2="116" y2="96"/>` },
+    crunch: { a:`<circle cx="22" cy="80" r="9"/><line x1="31" y1="84" x2="72" y2="86"/><line x1="72" y1="86" x2="90" y2="62"/><line x1="90" y1="62" x2="106" y2="86"/><line x1="31" y1="84" x2="24" y2="72"/><line x1="4" y1="98" x2="116" y2="98"/>`,
+              b:`<circle cx="40" cy="62" r="9"/><line x1="47" y1="70" x2="72" y2="86"/><line x1="72" y1="86" x2="90" y2="62"/><line x1="90" y1="62" x2="106" y2="86"/><line x1="47" y1="70" x2="36" y2="52"/><line x1="4" y1="98" x2="116" y2="98"/>` },
+    sideplank: `<circle cx="30" cy="46" r="9"/><line x1="36" y1="54" x2="106" y2="86"/><line x1="34" y1="54" x2="26" y2="90"/><line x1="52" y1="62" x2="56" y2="38"/><line x1="4" y1="98" x2="116" y2="98"/>`,
+    legraise: { a:`<circle cx="20" cy="80" r="9"/><line x1="29" y1="84" x2="66" y2="86"/><line x1="66" y1="86" x2="110" y2="88"/><line x1="29" y1="84" x2="44" y2="90"/><line x1="4" y1="98" x2="116" y2="98"/>`,
+                b:`<circle cx="20" cy="80" r="9"/><line x1="29" y1="84" x2="66" y2="86"/><line x1="66" y1="86" x2="62" y2="34"/><line x1="29" y1="84" x2="44" y2="90"/><line x1="4" y1="98" x2="116" y2="98"/>` },
+    russian: { a:`<circle cx="46" cy="38" r="9"/><line x1="50" y1="48" x2="62" y2="82"/><line x1="62" y1="82" x2="88" y2="68"/><line x1="88" y1="68" x2="106" y2="82"/><line x1="52" y1="54" x2="86" y2="52"/><line x1="4" y1="98" x2="116" y2="98"/>`,
+               b:`<circle cx="46" cy="38" r="9"/><line x1="50" y1="48" x2="62" y2="82"/><line x1="62" y1="82" x2="88" y2="68"/><line x1="88" y1="68" x2="106" y2="82"/><line x1="52" y1="54" x2="18" y2="52"/><line x1="4" y1="98" x2="116" y2="98"/>` },
     holdsquat: `<circle cx="58" cy="34" r="10"/><line x1="58" y1="44" x2="55" y2="66"/><line x1="55" y1="66" x2="40" y2="54"/><line x1="55" y1="66" x2="70" y2="54"/><line x1="55" y1="66" x2="40" y2="88"/><line x1="40" y1="88" x2="38" y2="108"/><line x1="55" y1="66" x2="72" y2="88"/><line x1="72" y1="88" x2="76" y2="108"/><line x1="92" y1="12" x2="92" y2="116"/>`,
     shoulderpress: { a:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="44" y2="42"/><line x1="60" y1="40" x2="76" y2="42"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>`,
                      b:`<circle cx="60" cy="20" r="10"/><line x1="60" y1="30" x2="60" y2="68"/><line x1="60" y1="40" x2="42" y2="20"/><line x1="60" y1="40" x2="78" y2="20"/><line x1="60" y1="68" x2="46" y2="105"/><line x1="60" y1="68" x2="74" y2="105"/>` },
@@ -471,6 +506,14 @@
   function unilateralPair(exName, repsText, tip, icon, phase, estDurPerSide, cues){
     const right = withCues(rep(exName + " — côté droit", repsText, tip, icon, phase, estDurPerSide), cues);
     const left  = withCues(rep(exName + " — côté gauche", repsText, tip, icon, phase, estDurPerSide), cues);
+    left.secondSide = true;
+    return [right, left];
+  }
+
+  // Paire d'étapes chronométrées (côté droit puis côté gauche), par exemple le gainage latéral.
+  function timedPair(exName, dur, tip, icon, phase, cues){
+    const right = withCues(timed(exName + " — côté droit", dur, tip, icon, phase), cues);
+    const left  = withCues(timed(exName + " — côté gauche", dur, tip, icon, phase), cues);
     left.secondSide = true;
     return [right, left];
   }
@@ -565,11 +608,67 @@
       "Haltères le long du corps, pieds à plat",
       "Monte sur la pointe des pieds, contracte les mollets",
       "Redescends lentement sans laisser retomber les talons"
+    ]),
+
+    // ---- Ajouts : renforcement du dos et abdominaux ----
+    revfly:  () => withCues(rep("Oiseau haltères", "12 répétitions (les deux bras ensemble)", "Buste penché, dos plat, ouvre les bras sur les côtés en serrant les omoplates.", "revfly", "strength", 35), [
+      "Buste penché à 45°, dos plat, haltères sous les épaules",
+      "Ouvre les bras sur les côtés, coudes légèrement fléchis",
+      "Serre les omoplates en haut, redescends lentement"
+    ]),
+    superman: () => withCues(rep("Superman, renfort du dos", "12 répétitions", "Soulève bras et jambes en même temps, regard vers le sol, sans cambrer la nuque.", "superman", "coordination", 35), [
+      "Allongé sur le ventre, bras tendus devant toi",
+      "Lève en même temps les bras et les jambes, regard vers le sol",
+      "Tiens une seconde en haut, redescends lentement"
+    ]),
+    birddog: () => unilateralPair("Bird dog", "10 répétitions", "Tends un bras et la jambe opposée, bassin immobile, dos plat.", "birddog", "coordination", 22, [
+      "À quatre pattes, mains sous les épaules, genoux sous les hanches",
+      "Tends un bras et la jambe opposée, à l'horizontale",
+      "Garde le bassin immobile, reviens lentement"
+    ]),
+    sideplank: () => timedPair("Gainage latéral", 25, "Corps aligné, hanche haute, appui sur l'avant-bras.", "sideplank", "coordination", [
+      "Appui sur l'avant-bras, coude sous l'épaule",
+      "Corps aligné de la tête aux pieds, hanche haute",
+      "Serre le ventre, respire normalement"
+    ]),
+    crunch:  () => withCues(rep("Crunchs", "15 répétitions", "Décolle les épaules en contractant le ventre, sans tirer sur la nuque.", "crunch", "coordination", 30), [
+      "Allongé sur le dos, genoux fléchis, mains près des tempes",
+      "Décolle les épaules en contractant le ventre, sans tirer sur la nuque",
+      "Redescends lentement sans te relâcher complètement"
+    ]),
+    legraise: () => withCues(rep("Relevés de jambes", "12 répétitions", "Dos plaqué au sol, monte les jambes tendues puis redescends lentement.", "legraise", "coordination", 32), [
+      "Allongé sur le dos, mains sous les fesses, dos plaqué au sol",
+      "Monte les jambes tendues jusqu'à la verticale",
+      "Redescends lentement sans cambrer le bas du dos"
+    ]),
+    russian: () => withCues(rep("Rotations russes", "20 répétitions", "Assis en V, buste incliné, tourne le buste d'un côté à l'autre.", "russian", "coordination", 35), [
+      "Assis, buste incliné en arrière, pieds décollés ou au sol",
+      "Tiens un haltère à deux mains devant le ventre",
+      "Tourne le buste d'un côté puis de l'autre, en contrôle"
     ])
   };
-  const UPPER = ['bench','row','raise','curl','tricep','shoulderpress'];
-  const LOWER = ['squat','lunge','hipext','calfraise'];
-  const COORD = ['abwheel','rotation','plate','plank','wallsit','platecalf','platelunge'];
+  // Catégories pour équilibrer le travail : haut du corps (poussée), dos / tirage, bas du corps, abdominaux
+  const MUSCU_CATS = {
+    push:  ['bench','shoulderpress','raise','tricep'],
+    pull:  ['row','revfly','curl'],
+    lower: ['squat','calfraise','lunge','hipext']
+  };
+  const MUSCU_SHARES = { push:0.38, pull:0.32, lower:0.30 };
+  const FIT_CATS = {
+    core:  ['abwheel','plank','rotation','sideplank','crunch','legraise','russian'],
+    back:  ['superman','birddog'],
+    lower: ['plate','platecalf','wallsit','platelunge']
+  };
+  const FIT_SHARES = { core:0.62, back:0.20, lower:0.18 };
+
+  // catégorie la plus en retard par rapport à sa part cible (en temps cumulé)
+  function pickCategory(shares, acc, available){
+    const cats = Object.keys(shares).filter(k => !available || available[k]);
+    const total = cats.reduce((a, k) => a + acc[k], 0);
+    let best = null, bestDef = -Infinity;
+    cats.forEach(k => { const d = shares[k] * (total + 30) - acc[k]; if(d > bestDef){ bestDef = d; best = k; } });
+    return best;
+  }
 
   const SESSION_SEEDS = [
     { muscuOffset:0, fitnessOffset:0, startMachine:'row'  },
@@ -579,14 +678,14 @@
     { muscuOffset:5, fitnessOffset:4, startMachine:'row'  }
   ];
 
-  const BASE_WEIGHTS = { cardio:0.22, jump:0.10, muscu:0.35, fitness:0.15 };
+  const BASE_WEIGHTS = { cardio:0.22, jump:0.06, muscu:0.42, fitness:0.30 };
 
   // Durées fixes demandées : échauffement rameur 3 min, retour au calme 2 min max,
   // pause de 2 min après le bloc cardio machine, 20 s de repos entre exercices de musculation.
   const WARMUP_SEC = 180;
   const COOLDOWN_SEC = 120;
   const PAUSE_AFTER_CARDIO_SEC = 120;
-  const MUSCU_REST_SEC = 20;
+  const MUSCU_REST_SEC = 30;
 
 
   // ---------------- Calcul / ré-équilibrage du temps ----------------
@@ -597,14 +696,15 @@
   let SESSION_CTX = null;
   let SESSION_TARGET = 0;
 
-  function makeMuscuUnit(ctx, no){
-    const key = ctx.combined[(ctx.nextIdx + ctx.seed.muscuOffset) % ctx.combined.length];
+  function makeMuscuUnit(ctx, no, cat){
+    const pool = MUSCU_CATS[cat];
+    const key = pool[(ctx.idx[cat] + ctx.seed.muscuOffset) % pool.length];
     const result = EXLIB[key]();
     const items = Array.isArray(result) ? result : [result];
     const out = [];
     items.forEach((ex, i) => {
-      ex.blockName = "Musculation"; ex.mu = no; out.push(ex);
-      if(i < items.length - 1){ const r = rest(15); r.mu = no; out.push(r); }
+      ex.blockName = "Musculation"; ex.mu = no; ex.cat = cat; out.push(ex);
+      if(i < items.length - 1){ const r = rest(15); r.mu = no; r.cat = cat; out.push(r); }
     });
     return out;
   }
@@ -638,19 +738,23 @@
           if(Math.min(...idxs) <= fromIdx) break;
           const u = idxs.reduce((a, i) => a + getDur(steps[i]), 0);
           if(Math.abs(residual(drift - u, cap)) >= cur) break;
+          const cat = steps[idxs.find(i => steps[i].cat)].cat;
+          const unitDur = idxs.reduce((a, i) => a + (steps[i].mu === last ? getDur(steps[i]) : 0), 0);
           idxs.sort((a, b) => b - a).forEach(i => steps.splice(i, 1));
-          ctx.nextIdx--; drift -= u;
+          ctx.acc[cat] -= unitDur; ctx.idx[cat]--; drift -= u;
         } else {
           let lastIdx = -1, lastNo = -1;
           steps.forEach((s, i) => { if(s.mu !== undefined){ lastIdx = i; if(s.mu > lastNo) lastNo = s.mu; } });
           if(lastIdx < fromIdx) break;
           const no = lastNo + 1;
           const sep = makeMuscuSep(no);
-          const unit = makeMuscuUnit(ctx, no);
-          const u = getDur(sep) + sumDur(unit);
+          const cat = pickCategory(MUSCU_SHARES, ctx.acc);
+          const unit = makeMuscuUnit(ctx, no, cat);
+          const unitDur = sumDur(unit);
+          const u = getDur(sep) + unitDur;
           if(Math.abs(residual(drift + u, cap)) >= cur) break;
           steps.splice(lastIdx + 1, 0, sep, ...unit);
-          ctx.nextIdx++; drift += u;
+          ctx.acc[cat] += unitDur; ctx.idx[cat]++; drift += u;
         }
       }
     }
@@ -670,6 +774,28 @@
 
   function countsAsExercise(s){
     return s.type !== 'rest' && s.phase !== 'active_recovery' && s.phase !== 'warmup' && !s.secondSide;
+  }
+
+  // ordre des exercices de fitness : chacun une seule fois, en alternant abdos / dos / bas du corps selon leurs parts
+  function orderFitnessKeys(seed){
+    const pools = {};
+    Object.keys(FIT_CATS).forEach(cat => {
+      const p = FIT_CATS[cat], off = seed.fitnessOffset % p.length;
+      pools[cat] = p.slice(off).concat(p.slice(0, off));
+    });
+    const acc = { core:0, back:0, lower:0 };
+    const keys = [];
+    for(;;){
+      const avail = {};
+      Object.keys(pools).forEach(k => { if(pools[k].length) avail[k] = true; });
+      if(!Object.keys(avail).length) break;
+      const cat = pickCategory(FIT_SHARES, acc, avail);
+      const key = pools[cat].shift();
+      keys.push(key);
+      const r = EXLIB[key](), items = Array.isArray(r) ? r : [r];
+      acc[cat] += items.reduce((a, s) => a + getDur(s), 0);
+    }
+    return keys;
   }
 
   function buildProgram(minutes, sessionIdx, themes){
@@ -753,11 +879,11 @@
         comboSteps.push(j); jumpSteps.push(j); acc += 30;
       };
       if(themes.fitness){
-        const fKeys = [];
-        for(let i=0;i<COORD.length;i++) fKeys.push(COORD[(i + seed.fitnessOffset) % COORD.length]);
+        const fKeys = orderFitnessKeys(seed);
         for(let i=0;i<fKeys.length && (i === 0 || acc < comboBudget);i++){
           if(comboSteps.length) addRest(30);
-          if(themes.corde){ addJump(); addRest(20); }
+          // la corde à sauter n'intervient qu'après deux exercices de fitness, pour ménager les jambes
+          if(themes.corde && i % 2 === 0){ addJump(); addRest(20); }
           acc += pushExercise(comboSteps, fKeys[i], "Fitness / gainage");
         }
       } else if(themes.corde){
@@ -797,20 +923,20 @@
     }
 
 
-    // ---- Bloc musculation : 20 s de repos entre les exercices, bloc élastique ----
-    const ctx = { muscu: false, combined: [], seed, nextIdx: 0 };
+    // ---- Bloc musculation : 30 s de repos entre les exercices, équilibré haut du corps / dos / bas du corps ----
+    const ctx = { muscu: false, seed, acc: { push:0, pull:0, lower:0 }, idx: { push:0, pull:0, lower:0 } };
     if(themes.muscu){
       const muscuBudget = muscuSec + Math.max(0, comboBudget - comboUsed);
       if(steps.length && steps[steps.length-1].type !== 'rest') steps.push(rest(30));
-      const maxLen = Math.max(UPPER.length, LOWER.length);
-      for(let i=0;i<maxLen;i++){ if(UPPER[i]) ctx.combined.push(UPPER[i]); if(LOWER[i]) ctx.combined.push(LOWER[i]); }
       ctx.muscu = true;
       let acc = 0, no = 0;
       while(no === 0 || acc < muscuBudget){
         if(no > 0){ const sep = makeMuscuSep(no); steps.push(sep); acc += sep.dur; }
-        const unit = makeMuscuUnit(ctx, no);
-        unit.forEach(s => { steps.push(s); acc += getDur(s); });
-        ctx.nextIdx++; no++;
+        const cat = pickCategory(MUSCU_SHARES, ctx.acc);
+        const unit = makeMuscuUnit(ctx, no, cat);
+        const unitDur = unit.reduce((a, s) => a + getDur(s), 0);
+        unit.forEach(s => steps.push(s));
+        ctx.acc[cat] += unitDur; ctx.idx[cat]++; acc += unitDur; no++;
       }
     }
 
@@ -859,7 +985,8 @@
         }
       }
     } else if(step.secondSide){
-      head.push(spokenName(step)); head.push('Objectif : ' + step.reps);
+      head.push(spokenName(step));
+      if(step.type === 'reps') head.push('Objectif : ' + step.reps);
     } else if(step.phase === 'effort' || step.phase === 'active_recovery'){
       head.push(spokenName(step));
       if(!(prev && (prev.type === 'rest' || prev.blockName === step.blockName))) adviceFragments(step).forEach(x => tail.push(x));
@@ -1407,12 +1534,14 @@
     elapsedInStepUp = 0;
     beepedCount = {};
     renderStep();
+    saveSession();
     if(announce) announceEntry(step);
   }
 
   function tick(){
     const step = STEPS[stepIdx];
     realElapsed += 1;
+    if(realElapsed % 5 === 0) saveSession();
 
     if(step.type === 'reps'){
       elapsedInStepUp += 1;
@@ -1458,6 +1587,7 @@
   const statsCards = document.getElementById('statsCards');
   const statsChart = document.getElementById('statsChart');
   const statsEmpty = document.getElementById('statsEmpty');
+  const statsCombo = document.getElementById('statsCombo');
   const doneCards = document.getElementById('doneCards');
   let statsTab = 'week';
   let statsReturn = 'home';
@@ -1510,8 +1640,34 @@
       return '<div class="stat-card"><div class="stat-num">' + a.count + '</div><div class="stat-lbl">' + lbl + '</div><div class="stat-sub">' + a.min + ' min</div></div>';
     }).join('');
   }
+  // tableau : nombre de fois où chaque durée (15/30/45/60) a été faite avec chaque numéro de séance (1 à 5)
+  function comboTableHtml(){
+    const counts = {};
+    loadStats().forEach(e => { const k = e.planned + '-' + e.session; counts[k] = (counts[k] || 0) + 1; });
+    let max = 0; Object.keys(counts).forEach(k => { if(counts[k] > max) max = counts[k]; });
+    const rows = [15, 30, 45, 60].map(m => {
+      let total = 0;
+      const cells = [1, 2, 3, 4, 5].map(s => {
+        const n = counts[m + '-' + s] || 0; total += n;
+        const style = n ? ' style="background:rgba(201,166,255,' + (0.25 + 0.65 * n / max).toFixed(2) + ');color:#181818;"' : '';
+        return '<td' + style + '>' + (n || '·') + '</td>';
+      }).join('');
+      return '<tr><th>' + m + ' min</th>' + cells + '<td class="tot">' + total + '</td></tr>';
+    }).join('');
+    return '<table class="combo-table"><thead><tr><th></th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+           '<p class="combo-note">Nombre de séances terminées pour chaque durée et chaque numéro de séance.</p>';
+  }
   function renderStats(){
     statsCards.innerHTML = statsCardsHtml();
+    const comboMode = statsTab === 'combo';
+    statsChart.style.display = comboMode ? 'none' : 'flex';
+    statsCombo.style.display = comboMode ? 'block' : 'none';
+    if(comboMode){
+      statsCombo.innerHTML = comboTableHtml();
+      document.querySelectorAll('.stats-tab').forEach(b => b.classList.toggle('selected', b.dataset.tab === statsTab));
+      statsEmpty.style.display = loadStats().length ? 'none' : 'block';
+      return;
+    }
     const n = statsTab === 'week' ? 8 : (statsTab === 'month' ? 12 : 5);
     const periods = lastPeriods(statsTab, n), agg = aggregate(statsTab);
     const max = Math.max(1, ...periods.map(p => (agg[p.key] || {count:0}).count));
@@ -1530,9 +1686,86 @@
     renderStats();
   }
 
+  // ---------------- Séance en cours : sauvegarde et reprise ----------------
+  const SESSION_KEY = 'prepaPhysiqueSession_v1';
+  const resumeCard = document.getElementById('resumeCard');
+  const resumeSub = document.getElementById('resumeSub');
+  let sessionActive = false;      // une séance est en cours (en mémoire) et peut être reprise
+
+  function saveSession(){
+    if(!sessionActive || !STEPS.length) return;
+    try{
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        v: 1, savedAt: Date.now(), minutes: selectedMinutes, session: selectedSession, steps: STEPS,
+        idx: stepIdx, left: timeLeftInStep, up: elapsedInStepUp, real: realElapsed, target: SESSION_TARGET, ctx: SESSION_CTX
+      }));
+    }catch(e){}
+  }
+  function clearSavedSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+  function loadSavedSession(){
+    try{
+      const raw = localStorage.getItem(SESSION_KEY);
+      if(!raw) return null;
+      const s = JSON.parse(raw);
+      if(!s || s.v !== 1 || !Array.isArray(s.steps) || !s.steps.length) return null;
+      if(Date.now() - s.savedAt > 12 * 3600 * 1000) return null;     // plus de 12 h : on considère la séance abandonnée
+      return s;
+    }catch(e){ return null; }
+  }
+  function refreshResumeCard(){
+    let info = null;
+    if(sessionActive && STEPS.length) info = { minutes: selectedMinutes, session: selectedSession, steps: STEPS, idx: stepIdx, real: realElapsed };
+    else { const s = loadSavedSession(); if(s) info = s; }
+    if(!info){ resumeCard.style.display = 'none'; return; }
+    const total = info.steps.filter(countsAsExercise).length;
+    let done = 0;
+    for(let i = 0; i <= info.idx && i < info.steps.length; i++) if(countsAsExercise(info.steps[i])) done++;
+    resumeSub.textContent = info.minutes + ' min · séance ' + info.session + ' · exercice ' + done + '/' + total + ' · ' + fmt(info.real) + ' écoulées';
+    resumeCard.style.display = 'block';
+  }
+  function showHome(){
+    liveScreen.style.display = 'none';
+    doneScreen.style.display = 'none';
+    statsScreen.style.display = 'none';
+    startScreen.style.display = 'block';
+    refreshResumeCard();
+  }
+  // quitter l'écran de séance sans la perdre : on la met en pause et on la garde
+  function leaveSession(){
+    if(running) pauseTimer(); else stopVoice();
+    if('speechSynthesis' in window) window.speechSynthesis.cancel();
+    saveSession();
+    showHome();
+  }
+  function resumeSession(){
+    ensureAudioCtx(); unlockVoice();
+    if(!sessionActive){
+      const s = loadSavedSession();
+      if(!s){ refreshResumeCard(); return; }
+      STEPS = s.steps; stepIdx = s.idx; timeLeftInStep = s.left; elapsedInStepUp = s.up; realElapsed = s.real;
+      SESSION_TARGET = s.target; SESSION_CTX = s.ctx; selectedMinutes = s.minutes; selectedSession = s.session;
+      sessionActive = true; workoutRecorded = false;
+    }
+    voiceCheckboxLive.checked = voiceCheckbox.checked;
+    startScreen.style.display = 'none'; statsScreen.style.display = 'none'; doneScreen.style.display = 'none';
+    liveScreen.style.display = 'block';
+    beepedCount = {};
+    renderStep();
+    startTimer();
+    announceEntry(STEPS[stepIdx]);
+  }
+  function abandonSession(){
+    if(!window.confirm('Abandonner la séance en cours ? Elle ne pourra plus être reprise.')) return;
+    sessionActive = false; STEPS = [];
+    clearSavedSession();
+    refreshResumeCard();
+  }
+
   function finishWorkout(){
     if(timerHandle) clearInterval(timerHandle);
     running = false;
+    sessionActive = false;
+    clearSavedSession();
     liveScreen.style.display = 'none';
     if(!workoutRecorded){
       workoutRecorded = true;
@@ -1549,14 +1782,12 @@
     running = false;
     stopVoice();
     if('speechSynthesis' in window) window.speechSynthesis.cancel();
-    liveScreen.style.display = 'none';
-    doneScreen.style.display = 'none';
-    statsScreen.style.display = 'none';
-    startScreen.style.display = 'block';
+    showHome();
   }
 
   // ---------------- Controls ----------------
   startBtn.addEventListener('click', () => {
+    if((sessionActive || loadSavedSession()) && !window.confirm('Une séance est en cours. La remplacer par une nouvelle séance ?')) return;
     ensureAudioCtx();
     unlockVoice();
     voiceCheckboxLive.checked = voiceCheckbox.checked;
@@ -1567,6 +1798,7 @@
     SESSION_CTX = PLAN_CTX;
     SESSION_TARGET = selectedMinutes * 60;
     realElapsed = 0;
+    sessionActive = true;
     startScreen.style.display = 'none';
     liveScreen.style.display = 'block';
     goToStep(0, true, false);
@@ -1581,13 +1813,16 @@
   skipFwdBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx + 1, true); });
   skipBackBtn.addEventListener('click', () => { ensureAudioCtx(); goToStep(stepIdx - 1, true); });
   repsDoneBtn.addEventListener('click', () => { ensureAudioCtx(); beep(660,0.2); goToStep(stepIdx + 1, true, true); });
-  backHomeBtn.addEventListener('click', () => { resetToHome(); });
+  backHomeBtn.addEventListener('click', () => { leaveSession(); });
+  document.getElementById('resumeBtn').addEventListener('click', () => resumeSession());
+  document.getElementById('abandonBtn').addEventListener('click', () => abandonSession());
+  refreshResumeCard();
   document.getElementById('statsBtn').addEventListener('click', () => showStats('home'));
   document.getElementById('doneStatsBtn').addEventListener('click', () => showStats('done'));
   document.getElementById('doneHomeBtn').addEventListener('click', () => resetToHome());
   document.getElementById('statsBackBtn').addEventListener('click', () => {
     statsScreen.style.display = 'none';
-    if(statsReturn === 'done') doneScreen.style.display = 'block'; else startScreen.style.display = 'block';
+    if(statsReturn === 'done') doneScreen.style.display = 'block'; else { startScreen.style.display = 'block'; refreshResumeCard(); }
   });
   document.querySelectorAll('.stats-tab').forEach(b => b.addEventListener('click', () => { statsTab = b.dataset.tab; renderStats(); }));
 
