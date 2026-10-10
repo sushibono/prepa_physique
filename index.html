@@ -276,6 +276,18 @@
           </div>
           <p class="voice-hint" id="voiceQualityWarning" style="display:none; color:var(--effort); font-weight:600;">⚠ Voix basique détectée (plus robotique) — réglages de synthèse vocale de l'appareil pour en installer une meilleure.</p>
         </div>
+        <div class="voice-picker">
+          <label for="audioModeSelect">Son avec ta musique (Spotify…)</label>
+          <div class="voice-picker-row">
+            <select id="audioModeSelect">
+              <option value="ambient">Mixer avec ma musique</option>
+              <option value="pause">Pauser la musique pendant les annonces</option>
+              <option value="auto">Réglage Safari par défaut</option>
+            </select>
+          </div>
+          <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
+        </div>
+
       </details>
 
       <button class="start-btn" id="startBtn">Démarrer la séance</button>
@@ -361,8 +373,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.0';
-  const APP_BUILD = '2026-10-10 · a';
+  const APP_VERSION = '1.1';
+  const APP_BUILD = '2026-10-10 · b';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
 
@@ -1005,6 +1017,26 @@
   voiceSelect.addEventListener('change', () => { selectedVoice = availableVoices[parseInt(voiceSelect.value,10)]; });
   testVoiceBtn.addEventListener('click', () => { ensureAudioCtx(); speakRaw("Voici un exemple de voix pour t'accompagner pendant ta séance."); });
 
+  // ---- Cohabitation avec la musique (Spotify…) : API Audio Session de Safari (iOS 16.4+) ----
+  const AUDIO_MODE_KEY = 'prepaPhysiqueAudioMode';
+  let audioMode = 'ambient';
+  try{ const m = localStorage.getItem(AUDIO_MODE_KEY); if(m === 'ambient' || m === 'pause' || m === 'auto') audioMode = m; }catch(e){}
+  let speechSeq = 0;
+  function setAudioSession(type){
+    try{ if('audioSession' in navigator) navigator.audioSession.type = type; }catch(e){}
+  }
+  function applyAudioMode(){
+    setAudioSession(audioMode === 'auto' ? 'auto' : 'ambient');
+  }
+  const audioModeSelect = document.getElementById('audioModeSelect');
+  audioModeSelect.value = audioMode;
+  audioModeSelect.addEventListener('change', () => {
+    audioMode = audioModeSelect.value;
+    try{ localStorage.setItem(AUDIO_MODE_KEY, audioMode); }catch(e){}
+    applyAudioMode();
+  });
+  applyAudioMode();
+
   function speakRaw(text){
     if(!('speechSynthesis' in window)) return;
     try{
@@ -1013,12 +1045,17 @@
       if(selectedVoice) u.voice = selectedVoice;
       u.lang = selectedVoice ? selectedVoice.lang : 'fr-FR';
       u.rate = 0.95; u.pitch = 0.95;
+      const seq = ++speechSeq;
+      if(audioMode === 'pause') setAudioSession('transient-solo');   // musique en pause pendant l'annonce
+      const done = () => { if(seq === speechSeq) applyAudioMode(); }; // puis la musique reprend
+      u.onend = done; u.onerror = done;
       window.speechSynthesis.speak(u);
     }catch(err){}
   }
   function speak(text){ if(!voiceCheckboxLive.checked) return; speakRaw(text); }
 
   function ensureAudioCtx(){
+    applyAudioMode();
     try{
       if(!audioCtx){ const Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioCtx = new Ctx(); }
       if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
