@@ -280,8 +280,8 @@
           <label for="audioModeSelect">Son avec ta musique (Spotify…)</label>
           <div class="voice-picker-row">
             <select id="audioModeSelect">
-              <option value="ambient">Mixer avec ma musique</option>
               <option value="pause">Pauser la musique pendant les annonces</option>
+              <option value="ambient">Mixer avec ma musique</option>
               <option value="auto">Réglage Safari par défaut</option>
             </select>
           </div>
@@ -289,6 +289,7 @@
             <input type="checkbox" id="useRecordedVoice" checked> Voix coach enregistrée (laisse ta musique)
           </label>
           <p class="voice-hint" id="voiceStatus">Voix enregistrée : …</p>
+          <p class="voice-hint" id="voiceDiag">Diagnostic : appuie sur ▶ pour tester.</p>
           <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
         </div>
 
@@ -377,8 +378,8 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.2';
-  const APP_BUILD = '2026-10-10 · c';
+  const APP_VERSION = '1.3';
+  const APP_BUILD = '2026-10-10 · d';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
 
   // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
@@ -1063,10 +1064,11 @@
   testVoiceBtn.addEventListener('click', () => { ensureAudioCtx(); unlockVoice(); speakFragments([TEST_PHRASE], true); });
 
   // ---- Cohabitation avec la musique (Spotify…) : API Audio Session de Safari (iOS 16.4+) ----
-  const AUDIO_MODE_KEY = 'prepaPhysiqueAudioMode';
-  let audioMode = 'ambient';
+  const AUDIO_MODE_KEY = 'prepaPhysiqueAudioMode2';
+  let audioMode = 'pause';
   try{ const m = localStorage.getItem(AUDIO_MODE_KEY); if(m === 'ambient' || m === 'pause' || m === 'auto') audioMode = m; }catch(e){}
   let speechSeq = 0;
+  let announcing = false;   // vrai pendant qu'une annonce enregistrée est en cours
   function setAudioSession(type){
     try{ if('audioSession' in navigator) navigator.audioSession.type = type; }catch(e){}
   }
@@ -1099,106 +1101,116 @@
   }
   function speak(text){ speakFragments([text]); }
 
-  // ---------------- Voix enregistrée : extraits d'un fichier audio (cohabite avec ta musique) ----------------
+  // ---------------- Voix enregistrée : extraits d'un fichier audio, lus via Web Audio ----------------
+  // (précision à l'échantillon près, pas de recherche de position, cohabite avec la musique)
   const VOICE_FILE = 'voix.mp3?v=' + APP_BUILD.replace(/[^0-9a-z]+/gi, '');
   const REC_VOICE_KEY = 'prepaPhysiqueRecordedVoice';
   const useRecordedVoiceEl = document.getElementById('useRecordedVoice');
   const voiceStatusEl = document.getElementById('voiceStatus');
-  const voiceAudio = new Audio();
-  voiceAudio.preload = 'auto';
-  let voiceFailed = false, voiceTimer = null, voiceHeld = false, voiceSeq = 0;
+  const voiceDiagEl = document.getElementById('voiceDiag');
+  let voiceBuffer = null, voiceDecoding = null, voiceRaw = null, voiceFailed = false;
+  let voiceSeq = 0, voiceNodes = [], voiceEndTimer = null;
   try{ if(localStorage.getItem(REC_VOICE_KEY) === '0') useRecordedVoiceEl.checked = false; }catch(e){}
   useRecordedVoiceEl.addEventListener('change', () => {
     try{ localStorage.setItem(REC_VOICE_KEY, useRecordedVoiceEl.checked ? '1' : '0'); }catch(e){}
   });
   function setVoiceStatus(t){ voiceStatusEl.textContent = t; }
-  voiceAudio.addEventListener('loadedmetadata', () => setVoiceStatus('Voix enregistrée : chargée ✓'));
-  voiceAudio.addEventListener('error', () => {
-    voiceFailed = true;
-    setVoiceStatus('Voix enregistrée : fichier voix.mp3 introuvable → voix de secours utilisée');
-  });
-  if(Object.keys(VOICE_INDEX).length === 0) setVoiceStatus('Voix enregistrée : non installée → voix de secours utilisée');
-  else setVoiceStatus('Voix enregistrée : se charge au premier démarrage');
+  function diag(t){
+    let sess = 'non disponible';
+    try{ if('audioSession' in navigator) sess = navigator.audioSession.type; }catch(e){}
+    voiceDiagEl.textContent = 'Diagnostic : ' + t + ' · session audio : ' + sess + ' · contexte : ' + (audioCtx ? audioCtx.state : 'aucun');
+  }
+  const HAS_VOICE = Object.keys(VOICE_INDEX).length > 0;
 
+  // Téléchargement du fichier dès l'ouverture de la page (sans toucher au son) : détecte tout de suite un fichier absent
+  if(HAS_VOICE && typeof fetch === 'function'){
+    setVoiceStatus('Voix enregistrée : téléchargement…');
+    voiceRaw = fetch(VOICE_FILE).then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); });
+    voiceRaw.then(b => setVoiceStatus('Voix enregistrée : fichier reçu (' + (b.byteLength/1e6).toFixed(1) + ' Mo), prêt au premier démarrage'))
+            .catch(e => { voiceFailed = true; setVoiceStatus('Voix enregistrée : fichier voix.mp3 introuvable (' + (e && e.message || e) + ') → voix de secours utilisée'); });
+  } else if(!HAS_VOICE){
+    setVoiceStatus('Voix enregistrée : non installée → voix de secours utilisée');
+  }
+
+  function loadVoiceBuffer(){
+    if(voiceBuffer) return Promise.resolve(voiceBuffer);
+    if(voiceDecoding) return voiceDecoding;
+    ensureAudioCtx();
+    if(!audioCtx || !voiceRaw) return Promise.reject(new Error('Web Audio ou fichier indisponible'));
+    voiceDecoding = voiceRaw
+      .then(raw => new Promise((res, rej) => {
+        const p = audioCtx.decodeAudioData(raw, res, rej);
+        if(p && p.catch) p.catch(rej);
+      }))
+      .then(b => { voiceBuffer = b; setVoiceStatus('Voix enregistrée : chargée ✓'); return b; })
+      .catch(e => { voiceDecoding = null; voiceFailed = true; setVoiceStatus('Voix enregistrée : décodage impossible (' + (e && e.message || e) + ') → voix de secours utilisée'); throw e; });
+    return voiceDecoding;
+  }
+  // appelé dans un geste de l'utilisateur (Démarrer / ▶) : réveille le contexte audio et décode la voix
   function unlockVoice(){
-    if(!useRecordedVoiceEl.checked || Object.keys(VOICE_INDEX).length === 0) return;
-    try{
-      if(!voiceAudio.getAttribute('src')){ voiceAudio.src = VOICE_FILE; voiceAudio.load(); }
-      const s = voiceSeq;
-      const p = voiceAudio.play();
-      if(p && p.then) p.then(() => { if(voiceSeq === s && !voiceTimer) voiceAudio.pause(); }).catch(() => {});
-    }catch(e){}
+    if(!useRecordedVoiceEl.checked || !HAS_VOICE) return;
+    ensureAudioCtx();
+    loadVoiceBuffer().catch(() => {});
   }
   function stopVoice(){
     voiceSeq++;
-    if(voiceTimer){ clearInterval(voiceTimer); voiceTimer = null; }
-    try{ voiceAudio.pause(); }catch(e){}
-  }
-  function afterMeta(cb){
-    if(voiceAudio.readyState >= 1) return cb(true);
-    let done = false;
-    const ok = () => { if(done) return; done = true; voiceAudio.removeEventListener('loadedmetadata', ok); clearTimeout(tm); cb(true); };
-    const tm = setTimeout(() => { if(done) return; done = true; voiceAudio.removeEventListener('loadedmetadata', ok); cb(false); }, 4000);
-    voiceAudio.addEventListener('loadedmetadata', ok);
-    if(!voiceAudio.getAttribute('src')){ voiceAudio.src = VOICE_FILE; voiceAudio.load(); }
-  }
-  function seekTo(t, cb){
-    if(Math.abs(voiceAudio.currentTime - t) < 0.05) return cb();
-    let done = false;
-    const fin = () => { if(done) return; done = true; voiceAudio.removeEventListener('seeked', fin); clearTimeout(tm); cb(); };
-    const tm = setTimeout(fin, 1500);
-    voiceAudio.addEventListener('seeked', fin);
-    try{ voiceAudio.currentTime = t; }catch(e){ fin(); }
+    if(voiceEndTimer){ clearTimeout(voiceEndTimer); voiceEndTimer = null; }
+    voiceNodes.forEach(n => { try{ n.stop(); }catch(e){} });
+    voiceNodes = [];
+    announcing = false;
   }
   function playRecorded(frags){
     stopVoice();
     const seq = voiceSeq;
     if('speechSynthesis' in window){ try{ window.speechSynthesis.cancel(); }catch(e){} }
-    if(audioMode === 'pause') setAudioSession('transient-solo');   // musique en pause pendant l'annonce
-    const end = () => { if(seq === voiceSeq) applyAudioMode(); };   // puis la musique reprend
-    const fallback = (i) => {
+    announcing = true;
+    if(audioMode === 'pause') setAudioSession('transient-solo');   // la musique se met en pause pendant l'annonce
+    loadVoiceBuffer().then(buf => {
       if(seq !== voiceSeq) return;
-      voiceFailed = true;
-      setVoiceStatus('Voix enregistrée : lecture impossible → voix de secours utilisée');
-      speakRaw(frags.slice(i).join('. '));
-    };
-    const next = (i) => {
-      if(seq !== voiceSeq) return;
-      if(i >= frags.length){ end(); return; }
-      const c = VOICE_INDEX[frags[i]];
-      afterMeta(ok => {
+      ensureAudioCtx();
+      const start = () => {
         if(seq !== voiceSeq) return;
-        if(!ok){ fallback(i); return; }
-        seekTo(Math.max(0, c[0] - 0.12), () => {
-          if(seq !== voiceSeq) return;
-          let p;
-          try{ p = voiceAudio.play(); }catch(e){ fallback(i); return; }
-          if(p && p.catch) p.catch(() => fallback(i));
-          if(voiceTimer) clearInterval(voiceTimer);
-          voiceTimer = setInterval(() => {
-            if(seq !== voiceSeq){ clearInterval(voiceTimer); return; }
-            if(voiceHeld) return;
-            if(voiceAudio.currentTime >= c[1] + 0.15){
-              clearInterval(voiceTimer); voiceTimer = null;
-              voiceAudio.pause();
-              setTimeout(() => next(i + 1), 120);
-            }
-          }, 25);
+        let t = audioCtx.currentTime + 0.15;
+        frags.forEach(txt => {
+          const k = VOICE_INDEX[txt];
+          const src = audioCtx.createBufferSource();
+          src.buffer = buf;
+          src.connect(audioCtx.destination);
+          const d = (k[1] - k[0]) + 0.1;
+          src.start(t, Math.max(0, k[0] - 0.05), d);
+          voiceNodes.push(src);
+          t += d + 0.2;                                              // courte pause naturelle entre les phrases
         });
-      });
-    };
-    next(0);
+        const total = t - audioCtx.currentTime;
+        diag(frags.length + ' phrase(s) lancée(s), durée ' + total.toFixed(1) + ' s');
+        voiceEndTimer = setTimeout(() => {
+          if(seq !== voiceSeq) return;
+          voiceNodes = []; voiceEndTimer = null; announcing = false;
+          applyAudioMode();                                          // la musique reprend
+          if(audioMode === 'pause' && audioCtx && audioCtx.suspend){ try{ audioCtx.suspend(); }catch(e){} }   // libère la session audio
+        }, total * 1000 + 150);
+      };
+      if(audioCtx.state === 'suspended' && audioCtx.resume){
+        const r = audioCtx.resume();
+        if(r && r.then) r.then(start, start); else start();
+      } else start();
+    }).catch(e => {
+      if(seq !== voiceSeq) return;
+      announcing = false;
+      diag('lecture impossible (' + (e && e.message || e) + '), voix de secours');
+      speakRaw(frags.join('. '));
+    });
   }
   function speakFragments(frags, force){
     if(!force && !voiceCheckboxLive.checked) return;
     if(!frags.length) return;
     const allKnown = frags.every(t => VOICE_INDEX[t]);
-    if(useRecordedVoiceEl.checked && !voiceFailed && allKnown){ playRecorded(frags); }
-    else { stopVoice(); speakRaw(frags.join('. ')); }
+    if(useRecordedVoiceEl.checked && HAS_VOICE && !voiceFailed && allKnown){ playRecorded(frags); }
+    else { stopVoice(); diag('voix de secours (synthèse)'); speakRaw(frags.join('. ')); }
   }
 
   function ensureAudioCtx(){
-    applyAudioMode();
+    if(!announcing) applyAudioMode();
     try{
       if(!audioCtx){ const Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioCtx = new Ctx(); }
       if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
@@ -1207,6 +1219,7 @@
   function beep(freq, duration){
     if(!audioCtx) return;
     try{
+      if(audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume();
       const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
       osc.frequency.value = freq; osc.type = 'sine';
       gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
@@ -1379,13 +1392,12 @@
     timerHandle = setInterval(tick, 1000);
     running = true;
     playPauseBtn.textContent = '❚❚'; playPauseBtn.title = 'Pause';
-    if(voiceHeld){ voiceHeld = false; if(voiceTimer){ try{ voiceAudio.play(); }catch(e){} } }
   }
   function pauseTimer(){
     if(timerHandle) clearInterval(timerHandle);
     running = false;
     playPauseBtn.textContent = '▶'; playPauseBtn.title = 'Reprendre';
-    voiceHeld = true; try{ voiceAudio.pause(); }catch(e){}
+    stopVoice();
     if('speechSynthesis' in window) window.speechSynthesis.pause();
   }
 
