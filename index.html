@@ -269,12 +269,12 @@
         </label>
 
         <div class="voice-picker">
-          <label for="voiceSelect">Voix française</label>
+          <label for="voiceSelect">Voix de secours (synthèse de l'iPhone)</label>
           <div class="voice-picker-row">
             <select id="voiceSelect"></select>
             <button class="btn btn-round" id="testVoiceBtn" title="Tester la voix">▶</button>
           </div>
-          <p class="voice-hint" id="voiceQualityWarning" style="display:none; color:var(--effort); font-weight:600;">⚠ Voix basique détectée (plus robotique) — réglages de synthèse vocale de l'appareil pour en installer une meilleure.</p>
+          
         </div>
         <div class="voice-picker">
           <label for="audioModeSelect">Son avec ta musique (Spotify…)</label>
@@ -285,6 +285,10 @@
               <option value="auto">Réglage Safari par défaut</option>
             </select>
           </div>
+          <label class="voice-toggle" style="justify-content:flex-start; margin:8px 0 2px;">
+            <input type="checkbox" id="useRecordedVoice" checked> Voix coach enregistrée (laisse ta musique)
+          </label>
+          <p class="voice-hint" id="voiceStatus">Voix enregistrée : …</p>
           <p class="voice-hint">Lance ta musique, puis appuie sur ▶ (voix) pour tester chaque mode. Si le coach devient muet, vérifie l'interrupteur silencieux de l'iPhone.</p>
         </div>
 
@@ -373,9 +377,12 @@
 (function(){
 
   // ---- Version affichée sur l'écran d'accueil : à incrémenter à chaque mise à jour ----
-  const APP_VERSION = '1.1';
-  const APP_BUILD = '2026-10-10 · b';
+  const APP_VERSION = '1.2';
+  const APP_BUILD = '2026-10-10 · c';
   document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD;
+
+  // Index de la voix enregistrée (généré automatiquement avec le fichier voix.mp3) : texte -> [début, fin] en secondes
+  const VOICE_INDEX = /*VOICE_INDEX_START*/{"Voici un exemple de voix pour t'accompagner pendant ta séance.":[0.6,3.73],"Séance terminée, bravo !":[4.18,6.013],"Échauffement — rameur, allure d'échauffement":[6.463,9.069],"Rame doucement, allure facile : monte progressivement, dos droit, épaules basses.":[9.519,14.431],"Rameur — effort":[14.881,16.345],"Rame vite et fort : pousse d'abord avec les jambes, dos droit.":[16.795,20.218],"Rameur — récupération active":[20.668,22.729],"Repos":[23.179,23.828],"Ensuite":[24.278,25.04],"Retour au calme — étirements":[25.49,27.393],"Étire doucement ischio-jambiers, dos et épaules. Respire lentement.":[27.843,31.457],"Échauffement — vélo, allure d'échauffement":[31.907,34.41],"Pédale doucement, allure facile : monte progressivement, épaules basses.":[34.86,39.127],"Vélo — effort":[39.577,40.923],"Pédale fort en restant fluide sur la selle, épaules basses.":[41.373,44.858],"Vélo — récupération active":[45.308,47.247],"Échauffement — corde à sauter légère":[47.697,49.664],"Petits bonds réguliers pour monter en température.":[50.114,52.646],"Corde à sauter":[53.096,54.122],"Petits bonds réguliers, poignets qui font tourner la corde, regarde devant toi.":[54.572,58.408],"Échauffement — mobilité articulaire":[58.858,61.08],"Mobilise épaules, hanches et chevilles, monte doucement en intensité.":[61.53,65.31],"Développé couché":[65.76,66.866],"Objectif : 12 répétitions (les deux bras ensemble)":[67.316,71.234],"Barre ou haltères au niveau de la poitrine, coudes à 45°":[71.684,75.306],"Pousse en expirant, bras presque tendus en haut":[75.756,78.249],"Redescends lentement, pieds ancrés au sol":[78.699,80.856],"Squats haltères":[81.306,82.344],"Objectif : 15 répétitions (les deux jambes ensemble)":[82.794,86.049],"Pieds largeur d'épaules, orteils légèrement ouverts":[86.499,89.389],"Les hanches reculent en premier, dos reste droit":[89.839,92.687],"Descends jusqu'aux cuisses parallèles, poids sur les talons":[93.137,95.856],"Rowing haltère — côté droit":[96.306,98.143],"Objectif : 12 répétitions":[98.593,100.687],"Dos plat, buste penché en avant à 45°":[101.137,104.092],"Tire le coude vers la hanche, pas vers l'épaule":[104.542,106.963],"Contracte l'omoplate en haut du mouvement":[107.413,109.373],"Rowing haltère — côté gauche":[109.823,111.76],"Fentes marchées, jambe avant — côté droit":[112.21,114.697],"Grand pas devant, buste droit":[115.147,117.115],"Le genou arrière frôle le sol sans le toucher":[117.565,119.925],"Pousse sur le talon avant pour te relever":[120.375,122.341],"Fentes marchées, jambe avant — côté gauche":[122.791,125.251],"Élévations latérales":[125.701,127.061],"Objectif : 15 répétitions (les deux bras ensemble)":[127.511,130.656],"Bras légèrement fléchis, jamais tendus":[131.106,133.271],"Monte jusqu'à hauteur d'épaule, pas plus haut":[133.721,135.983],"Redescends lentement, sans élan du buste":[136.433,138.692],"Extension de hanche, élastique — côté droit":[139.142,141.857],"Objectif : 15 répétitions":[142.307,144.231],"Élastique fixé au niveau des chevilles":[144.681,146.78],"Jambe tendue, pousse vers l'arrière":[147.229,149.094],"Contracte le fessier en haut, sans cambrer le dos":[149.544,151.964],"Extension de hanche, élastique — côté gauche":[152.414,155.306],"Curl biceps":[155.756,156.578],"Coudes collés au corps, immobiles":[157.027,158.828],"Monte en expirant, sans balancer le dos":[159.278,161.484],"Redescends lentement, 2 secondes de contrôle":[161.934,164.476],"Élévations mollets haltères":[164.926,166.457],"Objectif : 20 répétitions (les deux jambes ensemble)":[166.907,170.262],"Haltères le long du corps, pieds à plat":[170.712,172.632],"Monte sur la pointe des pieds, contracte les mollets":[173.082,175.576],"Redescends lentement sans laisser retomber les talons":[176.025,178.448],"Extension triceps haltère (nuque)":[178.898,181.288],"Haltère tenu à deux mains derrière la nuque, coudes vers le haut":[181.738,184.806],"Étends les bras vers le plafond sans bouger les coudes":[185.256,187.754],"Redescends lentement derrière la tête, contrôle le mouvement":[188.204,191.06],"Roue abdominale":[191.51,192.686],"Objectif : 10 répétitions (les deux mains ensemble)":[193.136,196.224],"Genoux au sol, mains posées sur la roue":[196.674,198.887],"Roule vers l'avant tant que le dos reste gainé":[199.337,201.821],"Reviens dès que le bas du dos veut se creuser":[202.271,204.868],"Élastique, rotation du buste — côté droit":[205.318,208.043],"Élastique tendu devant toi, bras tendus":[208.493,210.899],"Pivote uniquement le buste, hanches fixes":[211.349,213.874],"Reviens lentement au centre, sans à-coup":[214.324,216.649],"Élastique, rotation du buste — côté gauche":[217.099,220.0],"Power plate, squat isométrique":[220.45,222.182],"Cuisses proches de la parallèle au sol":[222.632,224.521],"Genoux alignés avec les pieds, pas vers l'intérieur":[224.971,227.588],"Gaine le ventre, respire normalement pendant la tenue":[228.038,230.996],"Planche (gainage)":[231.446,232.884],"Avant-bras au sol, coudes sous les épaules":[233.334,235.516],"Corps aligné tête-bassin-talons, sans creux ni bosse":[235.966,238.726],"Serre fessiers et ventre pendant toute la tenue":[239.176,241.544],"Chaise (dos au mur)":[241.994,243.793],"Dos entièrement plaqué contre le mur":[244.243,246.353],"Genoux à 90°, alignés avec les chevilles":[246.803,249.643],"Bras relâchés, respire normalement":[250.093,252.454],"Power plate — mollets isométriques":[252.904,254.89],"Pointes de pieds sur la plateforme, talons levés":[255.34,257.609],"Contracte les mollets, garde l'équilibre":[258.059,260.461],"Respire normalement pendant toute la tenue":[260.911,263.241],"Power plate — fente isométrique":[263.691,265.569],"Pied avant sur la plateforme, genou à 90°":[266.019,269.149],"Jambe arrière tendue, appui sur l'orteil":[269.599,272.003],"Buste droit pendant toute la tenue":[272.453,274.455],"Développé épaules haltères":[274.905,276.386],"Haltères à hauteur d'épaules, coudes sous les mains":[276.836,278.992],"Pousse vers le haut jusqu'à bras presque tendus":[279.442,281.906],"Redescends lentement, sans cambrer le bas du dos":[282.356,284.906]}/*VOICE_INDEX_END*/;
 
 
   // ---------------- ICONS ----------------
@@ -823,6 +830,44 @@
     return steps;
   }
 
+  // ---------------- Texte parlé, découpé en fragments (1 phrase = 1 extrait audio) ----------------
+  const TEST_PHRASE = "Voici un exemple de voix pour t'accompagner pendant ta séance.";
+  const FINISH_PHRASE = "Séance terminée, bravo !";
+  function spokenName(step){
+    return step.ex.replace(/\s*\d+\/\d+/g, '').replace(/\s*[—-]\s*$/, '').trim();
+  }
+  function adviceFragments(step){
+    if(step.cues && step.cues.length) return step.cues.slice();
+    return step.tip ? [step.tip] : [];
+  }
+  // head = à dire absolument ; tail = conseils, raccourcis si le temps manque
+  function fragmentsForEntry(step, next, prev){
+    const head = [], tail = [];
+    if(step.type === 'rest'){
+      head.push('Repos');
+      if(next){
+        head.push('Ensuite');
+        head.push(spokenName(next));
+        if(!next.secondSide){
+          if(next.type === 'reps') head.push('Objectif : ' + next.reps);
+          adviceFragments(next).forEach(x => tail.push(x));
+        }
+      }
+    } else if(step.secondSide){
+      head.push(spokenName(step)); head.push('Objectif : ' + step.reps);
+    } else if(step.phase === 'effort' || step.phase === 'active_recovery'){
+      head.push(spokenName(step));
+      if(!(prev && (prev.type === 'rest' || prev.blockName === step.blockName))) adviceFragments(step).forEach(x => tail.push(x));
+    } else if(step.type === 'reps'){
+      head.push(spokenName(step)); head.push('Objectif : ' + step.reps);
+      if(!(prev && prev.type === 'rest')) adviceFragments(step).forEach(x => tail.push(x));
+    } else {
+      head.push(spokenName(step));
+      if(!(prev && prev.type === 'rest')) adviceFragments(step).forEach(x => tail.push(x));
+    }
+    return { head, tail };
+  }
+
   function getDur(step){ return step.type === 'reps' ? step.estDur : step.dur; }
 
   // ---------------- DOM ----------------
@@ -1015,7 +1060,7 @@
   }
   if('speechSynthesis' in window){ loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
   voiceSelect.addEventListener('change', () => { selectedVoice = availableVoices[parseInt(voiceSelect.value,10)]; });
-  testVoiceBtn.addEventListener('click', () => { ensureAudioCtx(); speakRaw("Voici un exemple de voix pour t'accompagner pendant ta séance."); });
+  testVoiceBtn.addEventListener('click', () => { ensureAudioCtx(); unlockVoice(); speakFragments([TEST_PHRASE], true); });
 
   // ---- Cohabitation avec la musique (Spotify…) : API Audio Session de Safari (iOS 16.4+) ----
   const AUDIO_MODE_KEY = 'prepaPhysiqueAudioMode';
@@ -1052,7 +1097,105 @@
       window.speechSynthesis.speak(u);
     }catch(err){}
   }
-  function speak(text){ if(!voiceCheckboxLive.checked) return; speakRaw(text); }
+  function speak(text){ speakFragments([text]); }
+
+  // ---------------- Voix enregistrée : extraits d'un fichier audio (cohabite avec ta musique) ----------------
+  const VOICE_FILE = 'voix.mp3?v=' + APP_BUILD.replace(/[^0-9a-z]+/gi, '');
+  const REC_VOICE_KEY = 'prepaPhysiqueRecordedVoice';
+  const useRecordedVoiceEl = document.getElementById('useRecordedVoice');
+  const voiceStatusEl = document.getElementById('voiceStatus');
+  const voiceAudio = new Audio();
+  voiceAudio.preload = 'auto';
+  let voiceFailed = false, voiceTimer = null, voiceHeld = false, voiceSeq = 0;
+  try{ if(localStorage.getItem(REC_VOICE_KEY) === '0') useRecordedVoiceEl.checked = false; }catch(e){}
+  useRecordedVoiceEl.addEventListener('change', () => {
+    try{ localStorage.setItem(REC_VOICE_KEY, useRecordedVoiceEl.checked ? '1' : '0'); }catch(e){}
+  });
+  function setVoiceStatus(t){ voiceStatusEl.textContent = t; }
+  voiceAudio.addEventListener('loadedmetadata', () => setVoiceStatus('Voix enregistrée : chargée ✓'));
+  voiceAudio.addEventListener('error', () => {
+    voiceFailed = true;
+    setVoiceStatus('Voix enregistrée : fichier voix.mp3 introuvable → voix de secours utilisée');
+  });
+  if(Object.keys(VOICE_INDEX).length === 0) setVoiceStatus('Voix enregistrée : non installée → voix de secours utilisée');
+  else setVoiceStatus('Voix enregistrée : se charge au premier démarrage');
+
+  function unlockVoice(){
+    if(!useRecordedVoiceEl.checked || Object.keys(VOICE_INDEX).length === 0) return;
+    try{
+      if(!voiceAudio.getAttribute('src')){ voiceAudio.src = VOICE_FILE; voiceAudio.load(); }
+      const s = voiceSeq;
+      const p = voiceAudio.play();
+      if(p && p.then) p.then(() => { if(voiceSeq === s && !voiceTimer) voiceAudio.pause(); }).catch(() => {});
+    }catch(e){}
+  }
+  function stopVoice(){
+    voiceSeq++;
+    if(voiceTimer){ clearInterval(voiceTimer); voiceTimer = null; }
+    try{ voiceAudio.pause(); }catch(e){}
+  }
+  function afterMeta(cb){
+    if(voiceAudio.readyState >= 1) return cb(true);
+    let done = false;
+    const ok = () => { if(done) return; done = true; voiceAudio.removeEventListener('loadedmetadata', ok); clearTimeout(tm); cb(true); };
+    const tm = setTimeout(() => { if(done) return; done = true; voiceAudio.removeEventListener('loadedmetadata', ok); cb(false); }, 4000);
+    voiceAudio.addEventListener('loadedmetadata', ok);
+    if(!voiceAudio.getAttribute('src')){ voiceAudio.src = VOICE_FILE; voiceAudio.load(); }
+  }
+  function seekTo(t, cb){
+    if(Math.abs(voiceAudio.currentTime - t) < 0.05) return cb();
+    let done = false;
+    const fin = () => { if(done) return; done = true; voiceAudio.removeEventListener('seeked', fin); clearTimeout(tm); cb(); };
+    const tm = setTimeout(fin, 1500);
+    voiceAudio.addEventListener('seeked', fin);
+    try{ voiceAudio.currentTime = t; }catch(e){ fin(); }
+  }
+  function playRecorded(frags){
+    stopVoice();
+    const seq = voiceSeq;
+    if('speechSynthesis' in window){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+    if(audioMode === 'pause') setAudioSession('transient-solo');   // musique en pause pendant l'annonce
+    const end = () => { if(seq === voiceSeq) applyAudioMode(); };   // puis la musique reprend
+    const fallback = (i) => {
+      if(seq !== voiceSeq) return;
+      voiceFailed = true;
+      setVoiceStatus('Voix enregistrée : lecture impossible → voix de secours utilisée');
+      speakRaw(frags.slice(i).join('. '));
+    };
+    const next = (i) => {
+      if(seq !== voiceSeq) return;
+      if(i >= frags.length){ end(); return; }
+      const c = VOICE_INDEX[frags[i]];
+      afterMeta(ok => {
+        if(seq !== voiceSeq) return;
+        if(!ok){ fallback(i); return; }
+        seekTo(Math.max(0, c[0] - 0.12), () => {
+          if(seq !== voiceSeq) return;
+          let p;
+          try{ p = voiceAudio.play(); }catch(e){ fallback(i); return; }
+          if(p && p.catch) p.catch(() => fallback(i));
+          if(voiceTimer) clearInterval(voiceTimer);
+          voiceTimer = setInterval(() => {
+            if(seq !== voiceSeq){ clearInterval(voiceTimer); return; }
+            if(voiceHeld) return;
+            if(voiceAudio.currentTime >= c[1] + 0.15){
+              clearInterval(voiceTimer); voiceTimer = null;
+              voiceAudio.pause();
+              setTimeout(() => next(i + 1), 120);
+            }
+          }, 25);
+        });
+      });
+    };
+    next(0);
+  }
+  function speakFragments(frags, force){
+    if(!force && !voiceCheckboxLive.checked) return;
+    if(!frags.length) return;
+    const allKnown = frags.every(t => VOICE_INDEX[t]);
+    if(useRecordedVoiceEl.checked && !voiceFailed && allKnown){ playRecorded(frags); }
+    else { stopVoice(); speakRaw(frags.join('. ')); }
+  }
 
   function ensureAudioCtx(){
     applyAudioMode();
@@ -1178,19 +1321,18 @@
     totalTimeLabel.textContent = '≈ ' + fmt(total);
   }
 
-  function spokenAdvice(step){
-    if(step.cues && step.cues.length) return step.cues.join('. ');
-    return step.tip || '';
-  }
+  function clipDur(t){ const k = VOICE_INDEX[t]; return k ? (k[1] - k[0]) + 0.45 : 3; }
   function announceEntry(step){
-    if(step.type === 'reps'){ speak(step.ex + '. Objectif : ' + step.reps + '. ' + spokenAdvice(step)); }
-    else if(step.type === 'rest'){
-      const next = STEPS[stepIdx+1];
-      if(next){
-        const nextDesc = next.type === 'reps' ? (next.ex + '. Objectif : ' + next.reps) : next.ex;
-        speak('Repos. Ensuite : ' + nextDesc + '. ' + spokenAdvice(next));
-      } else { speak('Repos.'); }
-    } else { speak(step.ex + '. ' + spokenAdvice(step)); }
+    const next = STEPS[stepIdx + 1], prev = STEPS[stepIdx - 1];
+    const e = fragmentsForEntry(step, next, prev);
+    const tail = e.tail.slice();
+    if(step.type === 'rest'){
+      // on raccourcit les conseils pour que l'annonce tienne dans la durée du repos
+      const budget = step.dur - 1.5;
+      let total = e.head.concat(tail).reduce((acc, t) => acc + clipDur(t), 0);
+      while(total > budget && tail.length){ total -= clipDur(tail.pop()); }
+    }
+    speakFragments(e.head.concat(tail));
   }
 
   function goToStep(idx, announce, adjustPlan){
@@ -1237,11 +1379,13 @@
     timerHandle = setInterval(tick, 1000);
     running = true;
     playPauseBtn.textContent = '❚❚'; playPauseBtn.title = 'Pause';
+    if(voiceHeld){ voiceHeld = false; if(voiceTimer){ try{ voiceAudio.play(); }catch(e){} } }
   }
   function pauseTimer(){
     if(timerHandle) clearInterval(timerHandle);
     running = false;
     playPauseBtn.textContent = '▶'; playPauseBtn.title = 'Reprendre';
+    voiceHeld = true; try{ voiceAudio.pause(); }catch(e){}
     if('speechSynthesis' in window) window.speechSynthesis.pause();
   }
 
@@ -1335,13 +1479,14 @@
     }
     doneCards.innerHTML = statsCardsHtml();
     doneScreen.style.display = 'block';
-    speak("Séance terminée, bravo !");
+    speakFragments([FINISH_PHRASE]);
     beep(523,0.15); setTimeout(()=>beep(659,0.15),160); setTimeout(()=>beep(784,0.3),320);
   }
 
   function resetToHome(){
     if(timerHandle) clearInterval(timerHandle);
     running = false;
+    stopVoice();
     if('speechSynthesis' in window) window.speechSynthesis.cancel();
     liveScreen.style.display = 'none';
     doneScreen.style.display = 'none';
@@ -1352,6 +1497,7 @@
   // ---------------- Controls ----------------
   startBtn.addEventListener('click', () => {
     ensureAudioCtx();
+    unlockVoice();
     voiceCheckboxLive.checked = voiceCheckbox.checked;
     selectedThemes.machinePref = selectedMachinePref;
     selectedThemes.skipWarmupCooldown = skipWarmupCooldown;
